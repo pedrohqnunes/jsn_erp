@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pg_isready)",
+      "Bash(pg_isready --host=localhost --port=5432)",
+      "Bash(echo \"exit: $?\")",
+      "Read(//c/Program Files/**)",
+      "Bash(sc query *)",
+      "Bash(powershell.exe -Command \"Get-Service -Name '*postgres*' -ErrorAction SilentlyContinue | Select-Object Name,Status\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem 'C:\\\\Program Files\\\\PostgreSQL' -ErrorAction SilentlyContinue\")",
+      "PowerShell(Start-Process 'C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe'; Write-Host \"Docker Desktop iniciando...\")",
+      "Bash(docker info *)",
+      "Bash(break)",
+      "Bash(docker compose *)",
+      "PowerShell(netstat *)",
+      "PowerShell(Get-WmiObject *)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(npm run *)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s http://localhost:3001/api/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"admin@jsn.local\",\"password\":\"admin123\"}')",
+      "Bash(echo \"Frontend PID: $!\")",
+      "Bash(curl *)",
+      "Bash(npm list *)",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(node convert-logo.cjs)",
+      "Bash(node gen-favicon.cjs)",
+      "Bash(node *)",
+      "Bash(grep *)"
+    ]
+  }
+}

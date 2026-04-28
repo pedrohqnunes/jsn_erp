@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: jsn_crm_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jsn
+      POSTGRES_PASSWORD: jsn
+      POSTGRES_DB: jsn_crm
+    ports:
+      - "5433:5432"
+    volumes:
+      - jsn_crm_data:/var/lib/postgresql/data
+
+volumes:
+  jsn_crm_data:

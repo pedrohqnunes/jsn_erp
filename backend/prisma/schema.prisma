@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ===================== AUTH =====================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+// ===================== CRM =====================
+
+model Client {
+  id        String     @id @default(uuid())
+  type      ClientType @default(PF)
+  name      String
+  document  String?    @unique
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  quotes        Quote[]
+  serviceOrders ServiceOrder[]
+
+  @@index([name])
+}
+
+enum ClientType {
+  PF
+  PJ
+}
+
+// ===================== ORÇAMENTOS =====================
+
+model Quote {
+  id         String      @id @default(uuid())
+  number     Int         @unique @default(autoincrement())
+  clientId   String
+  client     Client      @relation(fields: [clientId], references: [id])
+  status     QuoteStatus @default(PENDING)
+  issuedAt   DateTime    @default(now())
+  validUntil DateTime?
+  notes      String?
+  totalValue Decimal     @default(0) @db.Decimal(14, 2)
+  totalCost  Decimal     @default(0) @db.Decimal(14, 2)
+  margin     Decimal     @default(0) @db.Decimal(14, 2)
+  marginPct  Decimal     @default(0) @db.Decimal(6, 2)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  items        QuoteItem[]
+  serviceOrder ServiceOrder?
+
+  @@index([clientId])
+  @@index([status])
+}
+
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model QuoteItem {
+  id          String  @id @default(uuid())
+  quoteId     String
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal @db.Decimal(14, 3)
+  unitPrice   Decimal @db.Decimal(14, 2)
+  unitCost    Decimal @default(0) @db.Decimal(14, 2)
+  totalPrice  Decimal @db.Decimal(14, 2)
+  totalCost   Decimal @db.Decimal(14, 2)
+
+  @@index([quoteId])
+}
+
+// ===================== ORDENS DE SERVIÇO =====================
+
+model ServiceOrder {
+  id              String       @id @default(uuid())
+  number          Int          @unique @default(autoincrement())
+  quoteId         String?      @unique
+  quote           Quote?       @relation(fields: [quoteId], references: [id])
+  clientId        String
+  client          Client       @relation(fields: [clientId], references: [id])
+  description     String
+  status          OSStatus     @default(WAITING_APPROVAL)
+  totalValue      Decimal      @db.Decimal(14, 2)
+  totalCost       Decimal      @db.Decimal(14, 2)
+  margin          Decimal      @db.Decimal(14, 2)
+  marginPct       Decimal      @db.Decimal(6, 2)
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  responsibleId   String?
+  responsible     Employee?    @relation(fields: [responsibleId], references: [id])
+  productionNotes String?
+  paymentTerms    PaymentTerms @default(CASH)
+  installments    Int          @default(1)
+  firstDueDate    DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  productionStages ProductionStage[]
+  receivables      Receivable[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+enum OSStatus {
+  WAITING_APPROVAL
+  WAITING_PRODUCTION
+  IN_PRODUCTION
+  FINISHED
+  CANCELED
+}
+
+enum PaymentTerms {
+  CASH
+  INSTALLMENTS
+  ON_DELIVERY
+}
+
+// ===================== PRODUÇÃO =====================
+
+model ProductionStage {
+  id             String       @id @default(uuid())
+  serviceOrderId String
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  name           String
+  status         StageStatus  @default(PENDING)
+  order          Int          @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  responsibleId  String?
+  responsible    Employee?    @relation(fields: [responsibleId], references: [id])
+  notes          String?
+
+  @@index([serviceOrderId])
+  @@index([status])
+}
+
+enum StageStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+// ===================== FINANCEIRO - RECEBER =====================
+
+model Receivable {
+  id                String        @id @default(uuid())
+  serviceOrderId    String
+  serviceOrder      ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  installment       Int           @default(1)
+  totalInstallments Int           @default(1)
+  dueDate           DateTime
+  expectedAmount    Decimal       @db.Decimal(14, 2)
+  paidAmount        Decimal       @default(0) @db.Decimal(14, 2)
+  paidAt            DateTime?
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     PaymentMethod @default(BANK_TRANSFER)
+  bank              String?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([serviceOrderId])
+  @@index([status, dueDate])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  PIX
+  CHECK
+  CREDIT_CARD
+  DEBIT_CARD
+  BOLETO
+}
+
+// ===================== FINANCEIRO - PAGAR =====================
+
+model Payable {
+  id                 String              @id @default(uuid())
+  description        String
+  category           String
+  account            String?
+  dueDate            DateTime
+  expectedAmount     Decimal             @db.Decimal(14, 2)
+  paidAmount         Decimal             @default(0) @db.Decimal(14, 2)
+  paidAt             DateTime?
+  status             PaymentStatus       @default(PENDING)
+  paymentMethod      PaymentMethod?
+  recurring          Boolean             @default(false)
+  recurringFrequency RecurringFrequency?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([status, dueDate])
+  @@index([category])
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+// ===================== FUNCIONÁRIOS =====================
+
+model Employee {
+  id        String         @id @default(uuid())
+  name      String
+  role      String
+  phone     String?
+  email     String?
+  status    EmployeeStatus @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  serviceOrders    ServiceOrder[]
+  productionStages ProductionStage[]
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
