@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useState } from 'react';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { api, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -15,6 +15,14 @@ export default function FuncionariosPage() {
   const { data, mutate } = useSWR<any[]>('/employees', fetcher);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+
+  async function deleteEmployee(e: any) {
+    if (!confirm(`Excluir funcionário "${e.name}"?`)) return;
+    try {
+      await api(`/employees/${e.id}`, { method: 'DELETE' });
+      await mutate();
+    } catch (err: any) { alert(err.message); }
+  }
 
   return (
     <div>
@@ -36,9 +44,14 @@ export default function FuncionariosPage() {
                 <td>{e.email ?? '-'}</td>
                 <td>{STATUS_LABEL[e.status]}</td>
                 <td>
-                  <button className="text-slate-500 hover:text-brand-700" onClick={() => { setEditing(e); setOpen(true); }}>
-                    <Pencil size={14} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button className="text-slate-500 hover:text-brand-700" title="Editar" onClick={() => { setEditing(e); setOpen(true); }}>
+                      <Pencil size={14} />
+                    </button>
+                    <button className="text-slate-500 hover:text-red-600" title="Excluir" onClick={() => deleteEmployee(e)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

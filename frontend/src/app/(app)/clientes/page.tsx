@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { Plus, Search, Pencil } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { api, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -13,6 +13,14 @@ export default function ClientesPage() {
   const { data, mutate } = useSWR<any[]>(`/clients${search ? `?search=${encodeURIComponent(search)}` : ''}`, fetcher);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+
+  async function deleteClient(c: any) {
+    if (!confirm(`Excluir cliente "${c.name}"?`)) return;
+    try {
+      await api(`/clients/${c.id}`, { method: 'DELETE' });
+      await mutate();
+    } catch (err: any) { alert(err.message); }
+  }
 
   return (
     <div>
@@ -54,10 +62,16 @@ export default function ClientesPage() {
                 <td>{c.phone ?? '-'}</td>
                 <td>{c.city ?? '-'}</td>
                 <td>
-                  <button className="text-slate-500 hover:text-brand-700"
-                    onClick={() => { setEditing(c); setOpen(true); }}>
-                    <Pencil size={14} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button className="text-slate-500 hover:text-brand-700" title="Editar"
+                      onClick={() => { setEditing(c); setOpen(true); }}>
+                      <Pencil size={14} />
+                    </button>
+                    <button className="text-slate-500 hover:text-red-600" title="Excluir"
+                      onClick={() => deleteClient(c)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

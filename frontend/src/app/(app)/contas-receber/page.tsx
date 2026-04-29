@@ -2,6 +2,7 @@
 
 import useSWR from 'swr';
 import { useState } from 'react';
+import { Pencil, XCircle } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -11,6 +12,15 @@ export default function ReceberPage() {
   const [filter, setFilter] = useState('');
   const { data, mutate } = useSWR<any[]>(`/receivables${filter ? `?status=${filter}` : ''}`, fetcher);
   const [paying, setPaying] = useState<any>(null);
+  const [editing, setEditing] = useState<any>(null);
+
+  async function cancel(r: any) {
+    if (!confirm(`Cancelar parcela ${r.installment}/${r.totalInstallments} de ${r.serviceOrder?.client?.name}?`)) return;
+    try {
+      await api(`/receivables/${r.id}/cancel`, { method: 'PATCH' });
+      await mutate();
+    } catch (e: any) { alert(e.message); }
+  }
 
   return (
     <div>
@@ -45,9 +55,21 @@ export default function ReceberPage() {
                 <td><span className={`badge ${PAY_STATUS_COLOR[r.status]}`}>{PAY_STATUS_LABEL[r.status]}</span></td>
                 <td>{r.paidAt ? PAYMENT_METHOD_LABEL[r.paymentMethod] : '-'}</td>
                 <td>
-                  {(r.status === 'PENDING' || r.status === 'OVERDUE') && (
-                    <button className="btn-primary text-xs" onClick={() => setPaying(r)}>Receber</button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {(r.status === 'PENDING' || r.status === 'OVERDUE') && (
+                      <>
+                        <button className="btn-primary text-xs" onClick={() => setPaying(r)}>Receber</button>
+                        <button className="text-slate-500 hover:text-brand-700" title="Editar vencimento/valor"
+                          onClick={() => setEditing(r)}>
+                          <Pencil size={14} />
+                        </button>
+                        <button className="text-slate-500 hover:text-red-600" title="Cancelar parcela"
+                          onClick={() => cancel(r)}>
+                          <XCircle size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -56,8 +78,61 @@ export default function ReceberPage() {
         </table>
       </div>
 
+      <EditReceivableModal key={editing?.id} target={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await mutate(); }} />
       <PayModal target={paying} onClose={() => setPaying(null)} onPaid={async () => { setPaying(null); await mutate(); }} />
     </div>
+  );
+}
+
+function EditReceivableModal({ target, onClose, onSaved }: any) {
+  const [dueDate, setDueDate] = useState(target ? new Date(target.dueDate).toISOString().slice(0, 10) : '');
+  const [expectedAmount, setExpectedAmount] = useState(target?.expectedAmount ?? 0);
+  const [notes, setNotes] = useState(target?.notes ?? '');
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api(`/receivables/${target.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ dueDate, expectedAmount: Number(expectedAmount), notes: notes || undefined }),
+      });
+      onSaved();
+    } catch (e: any) { setError(e.message); }
+  }
+
+  return (
+    <Modal open={!!target} title="Editar parcela" onClose={onClose}>
+      {target && (
+        <form onSubmit={submit} className="space-y-3">
+          <div className="text-sm text-slate-600">
+            <div>Parcela {target.installment}/{target.totalInstallments}</div>
+            <div>Cliente: <strong>{target.serviceOrder?.client?.name}</strong></div>
+          </div>
+          <div>
+            <label className="label">Vencimento</label>
+            <input className="input" type="date" required value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Valor previsto</label>
+            <input className="input" type="number" step="0.01" required value={expectedAmount}
+              onChange={(e) => setExpectedAmount(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Observações</label>
+            <textarea className="input" rows={2} value={notes}
+              onChange={(e) => setNotes(e.target.value)} />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
+            <button className="btn-primary" type="submit">Salvar</button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }
 

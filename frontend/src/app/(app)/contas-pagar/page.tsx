@@ -2,17 +2,48 @@
 
 import useSWR from 'swr';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertCircle, Clock } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
 import { PAY_STATUS_COLOR, PAY_STATUS_LABEL, PAYMENT_METHOD_LABEL, RECURRING_FREQUENCY_LABEL } from '@/lib/labels';
 
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function isThisWeek(date: Date, today: Date) {
+  const end = new Date(today);
+  end.setDate(today.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return date >= today && date <= end;
+}
+
 export default function PagarPage() {
   const [filter, setFilter] = useState('');
   const { data, mutate } = useSWR<any[]>(`/payables${filter ? `?status=${filter}` : ''}`, fetcher);
+  const { data: allData } = useSWR<any[]>('/payables', fetcher);
   const [createOpen, setCreateOpen] = useState(false);
   const [paying, setPaying] = useState<any>(null);
+  const [editing, setEditing] = useState<any>(null);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const pending = (allData ?? []).filter((p) => p.status === 'PENDING' || p.status === 'OVERDUE');
+  const dueToday = pending.filter((p) => isSameDay(new Date(p.dueDate), today));
+  const dueWeek = pending.filter((p) => {
+    const d = new Date(p.dueDate);
+    return isThisWeek(d, today) && !isSameDay(d, today);
+  });
+
+  async function deletePayable(p: any) {
+    if (!confirm(`Excluir "${p.description}"?`)) return;
+    try {
+      await api(`/payables/${p.id}`, { method: 'DELETE' });
+      await mutate();
+    } catch (e: any) { alert(e.message); }
+  }
 
   return (
     <div>
@@ -21,6 +52,46 @@ export default function PagarPage() {
         subtitle="Despesas, plano de contas e recorrência"
         actions={<button className="btn-primary" onClick={() => setCreateOpen(true)}><Plus size={16} /> Nova despesa</button>}
       />
+
+      {dueToday.length > 0 && (
+        <div className="mb-4 p-4 rounded-lg border border-red-200 bg-red-50">
+          <div className="flex items-center gap-2 mb-3 text-red-700 font-semibold">
+            <AlertCircle size={16} />
+            <span>Vencendo hoje ({dueToday.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {dueToday.map((p) => (
+              <div key={p.id} className="bg-white border border-red-200 rounded px-3 py-2 text-sm">
+                <div className="font-medium text-slate-800">{p.description}</div>
+                <div className="text-red-600 font-semibold">{brl(p.expectedAmount)}</div>
+                {(p.status === 'PENDING' || p.status === 'OVERDUE') && (
+                  <button className="text-xs text-brand-700 hover:underline mt-1" onClick={() => setPaying(p)}>
+                    Registrar pagamento
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dueWeek.length > 0 && (
+        <div className="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50">
+          <div className="flex items-center gap-2 mb-3 text-amber-700 font-semibold">
+            <Clock size={16} />
+            <span>Vencendo esta semana ({dueWeek.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {dueWeek.map((p) => (
+              <div key={p.id} className="bg-white border border-amber-200 rounded px-3 py-2 text-sm">
+                <div className="font-medium text-slate-800">{p.description}</div>
+                <div className="text-xs text-slate-500">{dt(p.dueDate)}</div>
+                <div className="text-amber-700 font-semibold">{brl(p.expectedAmount)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4 flex-wrap">
         {['', 'PENDING', 'OVERDUE', 'PAID', 'CANCELED'].map((s) => (
@@ -50,9 +121,21 @@ export default function PagarPage() {
                 <td><span className={`badge ${PAY_STATUS_COLOR[p.status]}`}>{PAY_STATUS_LABEL[p.status]}</span></td>
                 <td>{p.recurring ? (RECURRING_FREQUENCY_LABEL[p.recurringFrequency] ?? p.recurringFrequency) : '-'}</td>
                 <td>
-                  {(p.status === 'PENDING' || p.status === 'OVERDUE') && (
-                    <button className="btn-primary text-xs" onClick={() => setPaying(p)}>Pagar</button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {(p.status === 'PENDING' || p.status === 'OVERDUE') && (
+                      <button className="btn-primary text-xs" onClick={() => setPaying(p)}>Pagar</button>
+                    )}
+                    {p.status !== 'PAID' && (
+                      <button className="text-slate-500 hover:text-brand-700" title="Editar"
+                        onClick={() => setEditing(p)}>
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    <button className="text-slate-500 hover:text-red-600" title="Excluir"
+                      onClick={() => deletePayable(p)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -62,6 +145,7 @@ export default function PagarPage() {
       </div>
 
       <CreatePayableModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={async () => { setCreateOpen(false); await mutate(); }} />
+      <EditPayableModal key={editing?.id} target={editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await mutate(); }} />
       <PayPayableModal target={paying} onClose={() => setPaying(null)} onPaid={async () => { setPaying(null); await mutate(); }} />
     </div>
   );
@@ -137,6 +221,74 @@ function CreatePayableModal({ open, onClose, onSaved }: any) {
           <button className="btn-primary" type="submit">Salvar</button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function EditPayableModal({ target, onClose, onSaved }: any) {
+  const [form, setForm] = useState<any>(target ? {
+    description: target.description,
+    category: target.category,
+    account: target.account ?? '',
+    dueDate: new Date(target.dueDate).toISOString().slice(0, 10),
+    expectedAmount: target.expectedAmount,
+    notes: target.notes ?? '',
+  } : {});
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api(`/payables/${target.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...form, expectedAmount: Number(form.expectedAmount) }),
+      });
+      onSaved();
+    } catch (e: any) { setError(e.message); }
+  }
+
+  return (
+    <Modal open={!!target} title="Editar conta a pagar" onClose={onClose} size="lg">
+      {target && (
+        <form onSubmit={submit} className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <label className="label">Descrição</label>
+            <input className="input" required value={form.description}
+              onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Categoria</label>
+            <input className="input" value={form.category}
+              onChange={(e) => setForm((f: any) => ({ ...f, category: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Conta / Banco</label>
+            <input className="input" value={form.account}
+              onChange={(e) => setForm((f: any) => ({ ...f, account: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Vencimento</label>
+            <input className="input" type="date" required value={form.dueDate}
+              onChange={(e) => setForm((f: any) => ({ ...f, dueDate: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Valor previsto</label>
+            <input className="input" type="number" step="0.01" required value={form.expectedAmount}
+              onChange={(e) => setForm((f: any) => ({ ...f, expectedAmount: e.target.value }))} />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Observações</label>
+            <textarea className="input" rows={2} value={form.notes}
+              onChange={(e) => setForm((f: any) => ({ ...f, notes: e.target.value }))} />
+          </div>
+          {error && <p className="col-span-2 text-sm text-red-600">{error}</p>}
+          <div className="col-span-2 flex justify-end gap-2">
+            <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
+            <button className="btn-primary" type="submit">Salvar</button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }

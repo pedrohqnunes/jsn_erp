@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -12,6 +12,17 @@ import { QUOTE_STATUS_COLOR, QUOTE_STATUS_LABEL } from '@/lib/labels';
 export default function OrcamentosPage() {
   const { data, mutate } = useSWR<any[]>('/quotes', fetcher);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+
+  async function deleteQuote(q: any) {
+    if (!confirm(`Excluir orçamento #${String(q.number).padStart(5, '0')}?`)) return;
+    try {
+      await api(`/quotes/${q.id}`, { method: 'DELETE' });
+      await mutate();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
 
   return (
     <div>
@@ -19,7 +30,7 @@ export default function OrcamentosPage() {
         title="Orçamentos"
         subtitle="Pipeline comercial - itens, custo e margem"
         actions={
-          <button className="btn-primary" onClick={() => setOpen(true)}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}>
             <Plus size={16} /> Novo orçamento
           </button>
         }
@@ -30,7 +41,7 @@ export default function OrcamentosPage() {
           <thead>
             <tr>
               <th>Nº</th><th>Cliente</th><th>Status</th>
-              <th>Total</th><th>Margem</th><th>Emitido</th>
+              <th>Total</th><th>Margem</th><th>Emitido</th><th />
             </tr>
           </thead>
           <tbody>
@@ -46,26 +57,57 @@ export default function OrcamentosPage() {
                 <td>{brl(q.totalValue)}</td>
                 <td>{brl(q.margin)} ({Number(q.marginPct).toFixed(1)}%)</td>
                 <td>{dt(q.issuedAt)}</td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    {q.status === 'PENDING' && (
+                      <button className="text-slate-500 hover:text-brand-700" title="Editar"
+                        onClick={() => { setEditing(q); setOpen(true); }}>
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    <button className="text-slate-500 hover:text-red-600" title="Excluir"
+                      onClick={() => deleteQuote(q)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
             {data && data.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-8 text-slate-500">Sem orçamentos</td></tr>
+              <tr><td colSpan={7} className="text-center py-8 text-slate-500">Sem orçamentos</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <NewQuoteModal open={open} onClose={() => setOpen(false)} onSaved={async () => { setOpen(false); await mutate(); }} />
+      <QuoteModal
+        key={editing?.id ?? 'new'}
+        open={open}
+        editing={editing}
+        onClose={() => { setOpen(false); setEditing(null); }}
+        onSaved={async () => { setOpen(false); setEditing(null); await mutate(); }}
+      />
     </div>
   );
 }
 
-function NewQuoteModal({ open, onClose, onSaved }: any) {
+function QuoteModal({ open, editing, onClose, onSaved }: any) {
   const { data: clients } = useSWR<any[]>(open ? '/clients' : null, fetcher);
-  const [clientId, setClientId] = useState('');
-  const [validUntil, setValidUntil] = useState('');
-  const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<any[]>([{ description: '', quantity: 1, unitPrice: 0, unitCost: 0 }]);
+  const [clientId, setClientId] = useState(editing?.clientId ?? '');
+  const [validUntil, setValidUntil] = useState(
+    editing?.validUntil ? new Date(editing.validUntil).toISOString().slice(0, 10) : ''
+  );
+  const [notes, setNotes] = useState(editing?.notes ?? '');
+  const [items, setItems] = useState<any[]>(
+    editing?.items?.length
+      ? editing.items.map((it: any) => ({
+          description: it.description,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          unitCost: it.unitCost ?? 0,
+        }))
+      : [{ description: '', quantity: 1, unitPrice: 0, unitCost: 0 }]
+  );
   const [error, setError] = useState<string | null>(null);
 
   const totalValue = items.reduce((a, it) => a + Number(it.quantity || 0) * Number(it.unitPrice || 0), 0);
@@ -94,13 +136,17 @@ function NewQuoteModal({ open, onClose, onSaved }: any) {
           unitCost: Number(it.unitCost ?? 0),
         })),
       };
-      await api('/quotes', { method: 'POST', body: JSON.stringify(payload) });
+      if (editing?.id) {
+        await api(`/quotes/${editing.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      } else {
+        await api('/quotes', { method: 'POST', body: JSON.stringify(payload) });
+      }
       onSaved();
     } catch (e: any) { setError(e.message); }
   }
 
   return (
-    <Modal open={open} title="Novo orçamento" onClose={onClose} size="xl">
+    <Modal open={open} title={editing ? 'Editar orçamento' : 'Novo orçamento'} onClose={onClose} size="xl">
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>

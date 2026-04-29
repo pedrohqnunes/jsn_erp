@@ -64,7 +64,7 @@ export class ServiceOrdersService {
           },
         },
       });
-      await this.generateReceivables(tx, os.id, dto.totalValue, installments, firstDueDate);
+      await this.generateReceivables(tx, os.id, dto.totalValue, installments, firstDueDate, dto.customDueDates);
       return os;
     });
   }
@@ -73,6 +73,7 @@ export class ServiceOrdersService {
     paymentTerms?: 'CASH' | 'INSTALLMENTS' | 'ON_DELIVERY';
     installments?: number;
     firstDueDate?: string;
+    customDueDates?: string[];
   }) {
     const installments = opts.paymentTerms === 'INSTALLMENTS' ? (opts.installments ?? 1) : 1;
     const firstDueDate = opts.firstDueDate ? new Date(opts.firstDueDate) : new Date();
@@ -95,7 +96,7 @@ export class ServiceOrdersService {
         },
       },
     });
-    await this.generateReceivables(tx, os.id, Number(quote.totalValue), installments, firstDueDate);
+    await this.generateReceivables(tx, os.id, Number(quote.totalValue), installments, firstDueDate, opts.customDueDates);
     return os;
   }
 
@@ -105,13 +106,19 @@ export class ServiceOrdersService {
     totalValue: number,
     installments: number,
     firstDueDate: Date,
+    customDueDates?: string[],
   ) {
     const base = Number((totalValue / installments).toFixed(2));
     const remainder = Number((totalValue - base * installments).toFixed(2));
 
     const data = Array.from({ length: installments }).map((_, i) => {
-      const due = new Date(firstDueDate);
-      due.setMonth(due.getMonth() + i);
+      let due: Date;
+      if (customDueDates && customDueDates[i]) {
+        due = new Date(customDueDates[i]);
+      } else {
+        due = new Date(firstDueDate);
+        due.setMonth(due.getMonth() + i);
+      }
       const amount = i === installments - 1 ? Number((base + remainder).toFixed(2)) : base;
       return {
         serviceOrderId,

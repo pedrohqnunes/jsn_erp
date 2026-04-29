@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdateOSDto {
   @IsOptional() @IsString() description?: string;
@@ -19,5 +19,6 @@ export class CreateOSDto {
   @IsOptional() @IsIn(['CASH', 'INSTALLMENTS', 'ON_DELIVERY']) paymentTerms?: 'CASH' | 'INSTALLMENTS' | 'ON_DELIVERY';
   @IsOptional() @IsNumber() @Min(1) installments?: number;
   @IsOptional() @IsDateString() firstDueDate?: string;
+  @IsOptional() @IsArray() @IsDateString({}, { each: true }) customDueDates?: string[];
   @IsOptional() @IsString() responsibleId?: string;
 }

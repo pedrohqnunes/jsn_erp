@@ -147,18 +147,42 @@ function ConvertModal({ open, onClose, onConverted, quoteId }: any) {
   const [paymentTerms, setPaymentTerms] = useState<'CASH' | 'INSTALLMENTS' | 'ON_DELIVERY'>('CASH');
   const [installments, setInstallments] = useState(1);
   const [firstDueDate, setFirstDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [customDates, setCustomDates] = useState(false);
+  const [dueDates, setDueDates] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  function handleInstallmentsChange(n: number) {
+    setInstallments(n);
+    setDueDates(Array.from({ length: n }, (_, i) => {
+      const d = new Date(firstDueDate);
+      d.setMonth(d.getMonth() + i);
+      return d.toISOString().slice(0, 10);
+    }));
+  }
+
+  function handleFirstDueDateChange(v: string) {
+    setFirstDueDate(v);
+    if (!customDates) {
+      setDueDates(Array.from({ length: installments }, (_, i) => {
+        const d = new Date(v);
+        d.setMonth(d.getMonth() + i);
+        return d.toISOString().slice(0, 10);
+      }));
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     try {
+      const numInstallments = paymentTerms === 'INSTALLMENTS' ? Number(installments) : 1;
       const os = await api<any>(`/quotes/${quoteId}/convert`, {
         method: 'POST',
         body: JSON.stringify({
           paymentTerms,
-          installments: paymentTerms === 'INSTALLMENTS' ? Number(installments) : 1,
+          installments: numInstallments,
           firstDueDate,
+          customDueDates: customDates && paymentTerms === 'INSTALLMENTS' ? dueDates : undefined,
         }),
       });
       onConverted(os.id);
@@ -176,16 +200,57 @@ function ConvertModal({ open, onClose, onConverted, quoteId }: any) {
             <option value="ON_DELIVERY">Na entrega</option>
           </select>
         </div>
+
         {paymentTerms === 'INSTALLMENTS' && (
           <div>
             <label className="label">Nº de parcelas</label>
-            <input className="input" type="number" min={1} value={installments} onChange={(e) => setInstallments(Number(e.target.value))} />
+            <input className="input" type="number" min={1} value={installments}
+              onChange={(e) => handleInstallmentsChange(Number(e.target.value))} />
           </div>
         )}
-        <div>
-          <label className="label">1º vencimento</label>
-          <input className="input" type="date" value={firstDueDate} onChange={(e) => setFirstDueDate(e.target.value)} />
-        </div>
+
+        {paymentTerms !== 'INSTALLMENTS' || !customDates ? (
+          <div>
+            <label className="label">1º vencimento</label>
+            <input className="input" type="date" value={firstDueDate}
+              onChange={(e) => handleFirstDueDateChange(e.target.value)} />
+          </div>
+        ) : null}
+
+        {paymentTerms === 'INSTALLMENTS' && installments > 1 && (
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={customDates} onChange={(e) => {
+              setCustomDates(e.target.checked);
+              if (e.target.checked) {
+                setDueDates(Array.from({ length: installments }, (_, i) => {
+                  const d = new Date(firstDueDate);
+                  d.setMonth(d.getMonth() + i);
+                  return d.toISOString().slice(0, 10);
+                }));
+              }
+            }} />
+            Personalizar datas de vencimento por parcela
+          </label>
+        )}
+
+        {customDates && paymentTerms === 'INSTALLMENTS' && (
+          <div className="space-y-2">
+            <div className="text-xs text-slate-500 font-medium uppercase">Datas por parcela</div>
+            {Array.from({ length: installments }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="text-sm text-slate-600 w-20">Parcela {i + 1}</span>
+                <input className="input" type="date" required
+                  value={dueDates[i] ?? ''}
+                  onChange={(e) => {
+                    const copy = [...dueDates];
+                    copy[i] = e.target.value;
+                    setDueDates(copy);
+                  }} />
+              </div>
+            ))}
+          </div>
+        )}
+
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
