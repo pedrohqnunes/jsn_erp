@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'JSN CRM - Mini ERP',
+  title: 'JSN Pinturas - Sistema de Gestão',
   description: 'Sistema de gestão integrada para pintura eletrostática',
   icons: {
     icon: [
