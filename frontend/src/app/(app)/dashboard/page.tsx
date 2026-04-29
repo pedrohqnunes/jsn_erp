@@ -1,9 +1,8 @@
 'use client';
 
 import useSWR from 'swr';
-import { fetcher, brl } from '@/lib/api';
+import { fetcher, brl, dt } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
-import { OS_STATUS_LABEL } from '@/lib/labels';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,9 +13,29 @@ type Overview = { financeiro: any; operacional: any; comercial: any; estrategico
 
 const CHART_STYLE = { fontSize: 11, fontFamily: 'var(--font-inter), Inter, sans-serif' };
 
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 export default function DashboardPage() {
-  const { data }     = useSWR<Overview>('/dashboard/overview', fetcher);
-  const { data: top } = useSWR<any[]>('/dashboard/top-clients', fetcher);
+  const { data }          = useSWR<Overview>('/dashboard/overview', fetcher);
+  const { data: top }     = useSWR<any[]>('/dashboard/top-clients', fetcher);
+  const { data: payables } = useSWR<any[]>('/payables', fetcher);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const pendingPayables = (payables ?? []).filter((p) => p.status === 'PENDING' || p.status === 'OVERDUE');
+  const dueToday = pendingPayables.filter((p) => isSameDay(new Date(p.dueDate), today));
+  const dueWeek  = pendingPayables.filter((p) => {
+    const d = new Date(p.dueDate);
+    return d >= today && d <= weekEnd && !isSameDay(d, today);
+  });
+  const totalToday = dueToday.reduce((s, p) => s + Number(p.expectedAmount), 0);
+  const totalWeek  = dueWeek.reduce((s, p) => s + Number(p.expectedAmount), 0);
 
   if (!data) return <LoadingState />;
 
@@ -116,17 +135,72 @@ export default function DashboardPage() {
 
       {/* ── Métricas ── */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <MetricCard title="Operacional">
-          <MetricRow label="OS finalizadas (mês)"   value={String(data.operacional.osFinalizadasMes)} />
-          <MetricRow label="Tempo médio produção"    value={`${data.operacional.tempoMedioProducaoDias} dias`} />
-          <div className="divider my-3" />
-          {Object.entries(data.operacional.ordensPorStatus).map(([k, v]: any) => (
-            <div key={k} className="flex justify-between text-xs py-0.5">
-              <span className="text-slate-400">{OS_STATUS_LABEL[k] ?? k}</span>
-              <span className="font-semibold text-slate-700 tabular">{v}</span>
+        <div className="card p-5">
+          <div className="section-title mb-4">Contas a Pagar</div>
+
+          {/* Hoje */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-red-500">Hoje</span>
+              <span className="text-xs text-slate-400">{dueToday.length} conta{dueToday.length !== 1 ? 's' : ''}</span>
             </div>
-          ))}
-        </MetricCard>
+            {dueToday.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Nenhum vencimento hoje</p>
+            ) : (
+              <>
+                <div className="space-y-1.5 mb-2">
+                  {dueToday.slice(0, 3).map((p) => (
+                    <div key={p.id} className="flex justify-between items-center text-xs">
+                      <span className="text-slate-600 truncate max-w-[140px]">{p.description}</span>
+                      <span className="font-semibold text-red-600 tabular ml-2">{brl(p.expectedAmount)}</span>
+                    </div>
+                  ))}
+                  {dueToday.length > 3 && (
+                    <p className="text-xs text-slate-400">+{dueToday.length - 3} mais...</p>
+                  )}
+                </div>
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
+                  <span className="text-xs text-slate-400">Total hoje</span>
+                  <span className="text-sm font-bold text-red-600 tabular">{brl(totalToday)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="divider my-3" />
+
+          {/* Esta semana */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-amber-500">Esta semana</span>
+              <span className="text-xs text-slate-400">{dueWeek.length} conta{dueWeek.length !== 1 ? 's' : ''}</span>
+            </div>
+            {dueWeek.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Nenhum vencimento esta semana</p>
+            ) : (
+              <>
+                <div className="space-y-1.5 mb-2">
+                  {dueWeek.slice(0, 3).map((p) => (
+                    <div key={p.id} className="flex justify-between items-center text-xs">
+                      <div className="min-w-0">
+                        <div className="text-slate-600 truncate max-w-[130px]">{p.description}</div>
+                        <div className="text-slate-400">{dt(p.dueDate)}</div>
+                      </div>
+                      <span className="font-semibold text-amber-600 tabular ml-2">{brl(p.expectedAmount)}</span>
+                    </div>
+                  ))}
+                  {dueWeek.length > 3 && (
+                    <p className="text-xs text-slate-400">+{dueWeek.length - 3} mais...</p>
+                  )}
+                </div>
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
+                  <span className="text-xs text-slate-400">Total semana</span>
+                  <span className="text-sm font-bold text-amber-600 tabular">{brl(totalWeek)}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
         <MetricCard title="Comercial">
           <MetricRow label="Total de orçamentos" value={String(data.comercial.totalOrcamentos)} />
