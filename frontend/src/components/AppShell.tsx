@@ -56,8 +56,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2.5">
             <Image src="/logo-36.png" alt="JSN" width={30} height={30} className="rounded-lg flex-shrink-0" priority />
             <div>
-              <div className="text-[13px] font-semibold text-white leading-none mb-0.5">JSN CRM</div>
-              <div className="text-[10px] text-white/30 leading-none">Mini ERP</div>
+              <div className="text-[13px] font-semibold text-white leading-none mb-0.5">JSN Pinturas</div>
+              <div className="text-[10px] text-white/30 leading-none">Sistema de Gestão</div>
             </div>
           </div>
         </div>
