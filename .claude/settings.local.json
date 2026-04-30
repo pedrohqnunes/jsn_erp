@@ -27,7 +27,19 @@
       "Bash(node convert-logo.cjs)",
       "Bash(node gen-favicon.cjs)",
       "Bash(node *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(sshpass -V)",
+      "Bash(ssh -V)",
+      "Bash(python3 -c \"import paramiko; print\\('paramiko ok'\\)\")",
+      "Bash(pip install *)",
+      "Bash(pip3 install *)",
+      "PowerShell(python -m pip install paramiko 2>&1 | Select-Object -Last 3)",
+      "Bash(mkdir -p /tmp/vps-setup)",
+      "Bash(npm init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\), indent=2\\)\\)\")"
     ]
   }
 }
