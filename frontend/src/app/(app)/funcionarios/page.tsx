@@ -2,13 +2,20 @@
 
 import useSWR from 'swr';
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Pencil, Trash2, UserCog, Phone, Mail } from 'lucide-react';
 import { api, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
+import EmptyState from '@/components/ui/EmptyState';
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Ativo', INACTIVE: 'Inativo', ON_LEAVE: 'Afastado',
+};
+const STATUS_BADGE: Record<string, string> = {
+  ACTIVE:   'badge badge-success',
+  INACTIVE: 'badge badge-muted',
+  ON_LEAVE: 'badge badge-warning',
 };
 
 export default function FuncionariosPage() {
@@ -28,37 +35,61 @@ export default function FuncionariosPage() {
     <div>
       <PageHeader
         title="Funcionários"
-        subtitle="Equipe operacional - vinculável às OS e etapas"
-        actions={<button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}><Plus size={16} /> Novo</button>}
+        subtitle="Equipe operacional — vinculável às OS e etapas"
+        icon={UserCog}
+        actions={<button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}><Plus size={15} /> Novo</button>}
       />
 
-      <div className="card overflow-x-auto">
-        <table className="table w-full">
-          <thead><tr><th>Nome</th><th>Cargo</th><th>Telefone</th><th>Email</th><th>Status</th><th /></tr></thead>
-          <tbody>
-            {(data ?? []).map((e) => (
-              <tr key={e.id}>
-                <td className="font-medium">{e.name}</td>
-                <td>{e.role}</td>
-                <td>{e.phone ?? '-'}</td>
-                <td>{e.email ?? '-'}</td>
-                <td>{STATUS_LABEL[e.status]}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <button className="text-slate-500 hover:text-brand-700" title="Editar" onClick={() => { setEditing(e); setOpen(true); }}>
-                      <Pencil size={14} />
-                    </button>
-                    <button className="text-slate-500 hover:text-red-600" title="Excluir" onClick={() => deleteEmployee(e)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {data && data.length === 0 && <tr><td colSpan={6} className="text-center py-6 text-slate-500">Nenhum cadastro</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="card overflow-hidden"
+      >
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Contato</th><th>Email</th><th>Status</th><th /></tr></thead>
+            <tbody>
+              {(data ?? []).map((e) => (
+                <tr key={e.id}>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <span className="avatar w-8 h-8">{(e.name ?? '?').slice(0, 2).toUpperCase()}</span>
+                      <span className="font-medium text-ink">{e.name}</span>
+                    </div>
+                  </td>
+                  <td className="text-ink-muted">{e.role}</td>
+                  <td className="text-ink-muted text-[12.5px]">
+                    {e.phone ? (
+                      <span className="inline-flex items-center gap-1.5"><Phone size={11} className="text-ink-subtle" /> {e.phone}</span>
+                    ) : '—'}
+                  </td>
+                  <td className="text-ink-muted text-[12.5px]">
+                    {e.email ? (
+                      <span className="inline-flex items-center gap-1.5"><Mail size={11} className="text-ink-subtle" /> {e.email}</span>
+                    ) : '—'}
+                  </td>
+                  <td><span className={STATUS_BADGE[e.status]}>{STATUS_LABEL[e.status]}</span></td>
+                  <td>
+                    <div className="flex items-center gap-1 justify-end">
+                      <button className="btn-icon hover:text-brand-600" title="Editar" onClick={() => { setEditing(e); setOpen(true); }}>
+                        <Pencil size={14} />
+                      </button>
+                      <button className="btn-icon hover:text-rose-600" title="Excluir" onClick={() => deleteEmployee(e)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data && data.length === 0 && (
+                <tr><td colSpan={6} className="p-0">
+                  <EmptyState icon={UserCog} title="Nenhum cadastro" description="Adicione um funcionário para começar." />
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
       <FormModal key={editing?.id ?? 'new'} open={open} editing={editing} onClose={() => setOpen(false)} onSaved={async () => { setOpen(false); await mutate(); }} />
     </div>
@@ -111,7 +142,12 @@ function FormModal({ open, editing, onClose, onSaved }: any) {
             <option value="ON_LEAVE">Afastado</option>
           </select>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <div className="flex items-start gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn-primary" type="submit">Salvar</button>

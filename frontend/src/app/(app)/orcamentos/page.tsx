@@ -3,10 +3,13 @@
 import useSWR from 'swr';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Pencil, Trash2, FileText } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
+import EmptyState from '@/components/ui/EmptyState';
+import MarginBar from '@/components/ui/MarginBar';
 import { QUOTE_STATUS_COLOR, QUOTE_STATUS_LABEL } from '@/lib/labels';
 
 export default function OrcamentosPage() {
@@ -24,61 +27,105 @@ export default function OrcamentosPage() {
     }
   }
 
+  const total = (data ?? []).length;
+  const aprovados = (data ?? []).filter(q => q.status === 'APPROVED').length;
+  const pendentes = (data ?? []).filter(q => q.status === 'PENDING').length;
+  const rejeitados = (data ?? []).filter(q => q.status === 'REJECTED').length;
+
   return (
     <div>
       <PageHeader
         title="Orçamentos"
-        subtitle="Pipeline comercial - itens, custo e margem"
+        subtitle="Pipeline comercial — itens, custo e margem"
+        icon={FileText}
         actions={
           <button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}>
-            <Plus size={16} /> Novo orçamento
+            <Plus size={15} /> Novo orçamento
           </button>
         }
       />
 
-      <div className="card overflow-x-auto">
-        <table className="table w-full">
-          <thead>
-            <tr>
-              <th>Nº</th><th>Cliente</th><th>Status</th>
-              <th>Total</th><th>Margem</th><th>Emitido</th><th />
-            </tr>
-          </thead>
-          <tbody>
-            {(data ?? []).map((q) => (
-              <tr key={q.id} className="hover:bg-slate-50">
-                <td>
-                  <Link href={`/orcamentos/${q.id}`} className="font-medium text-brand-700 hover:underline">
-                    #{String(q.number).padStart(5, '0')}
-                  </Link>
-                </td>
-                <td>{q.client.name}</td>
-                <td><span className={`badge ${QUOTE_STATUS_COLOR[q.status]}`}>{QUOTE_STATUS_LABEL[q.status]}</span></td>
-                <td>{brl(q.totalValue)}</td>
-                <td>{brl(q.margin)} ({Number(q.marginPct).toFixed(1)}%)</td>
-                <td>{dt(q.issuedAt)}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    {q.status === 'PENDING' && (
-                      <button className="text-slate-500 hover:text-brand-700" title="Editar"
-                        onClick={() => { setEditing(q); setOpen(true); }}>
-                        <Pencil size={14} />
-                      </button>
-                    )}
-                    <button className="text-slate-500 hover:text-red-600" title="Excluir"
-                      onClick={() => deleteQuote(q)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
+      {data && data.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <SmallStat label="Total" value={total} tone="brand" />
+          <SmallStat label="Aprovados" value={aprovados} tone="success" />
+          <SmallStat label="Pendentes" value={pendentes} tone="warning" />
+          <SmallStat label="Rejeitados" value={rejeitados} tone="danger" />
+        </div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="card overflow-hidden"
+      >
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead>
+              <tr>
+                <th>Nº</th><th>Cliente</th><th>Status</th>
+                <th className="num">Total</th><th>Margem</th><th>Emitido</th><th />
               </tr>
-            ))}
-            {data && data.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-8 text-slate-500">Sem orçamentos</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {(data ?? []).map((q) => (
+                <tr key={q.id}>
+                  <td>
+                    <Link href={`/orcamentos/${q.id}`} className="font-semibold text-brand-600 hover:text-brand-700 tabular">
+                      #{String(q.number).padStart(5, '0')}
+                    </Link>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <span className="avatar w-7 h-7">{(q.client.name ?? '?').slice(0, 2).toUpperCase()}</span>
+                      <span className="font-medium text-ink">{q.client.name}</span>
+                    </div>
+                  </td>
+                  <td><span className={QUOTE_STATUS_COLOR[q.status]}>{QUOTE_STATUS_LABEL[q.status]}</span></td>
+                  <td className="num font-semibold">{brl(q.totalValue)}</td>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <MarginBar pct={Number(q.marginPct)} />
+                      <span className="text-[11px] text-ink-subtle tabular whitespace-nowrap">{brl(q.margin)}</span>
+                    </div>
+                  </td>
+                  <td className="text-ink-muted text-[12.5px]">{dt(q.issuedAt)}</td>
+                  <td>
+                    <div className="flex items-center gap-1 justify-end">
+                      {q.status === 'PENDING' && (
+                        <button className="btn-icon hover:text-brand-600" title="Editar"
+                          onClick={() => { setEditing(q); setOpen(true); }}>
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                      <button className="btn-icon hover:text-rose-600" title="Excluir"
+                        onClick={() => deleteQuote(q)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data && data.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-0">
+                    <EmptyState
+                      icon={FileText}
+                      title="Sem orçamentos ainda"
+                      description="Comece criando seu primeiro orçamento."
+                      action={
+                        <button className="btn-primary" onClick={() => { setEditing(null); setOpen(true); }}>
+                          <Plus size={15} /> Novo orçamento
+                        </button>
+                      }
+                    />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
       <QuoteModal
         key={editing?.id ?? 'new'}
@@ -87,6 +134,24 @@ export default function OrcamentosPage() {
         onClose={() => { setOpen(false); setEditing(null); }}
         onSaved={async () => { setOpen(false); setEditing(null); await mutate(); }}
       />
+    </div>
+  );
+}
+
+function SmallStat({ label, value, tone }: { label: string; value: number; tone: 'brand' | 'success' | 'warning' | 'danger' }) {
+  const colors = {
+    brand:   { dot: 'bg-brand-500',   text: 'text-ink' },
+    success: { dot: 'bg-emerald-500', text: 'text-emerald-600' },
+    warning: { dot: 'bg-amber-500',   text: 'text-amber-600' },
+    danger:  { dot: 'bg-rose-500',    text: 'text-rose-600' },
+  };
+  return (
+    <div className="card p-3.5 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full ${colors[tone].dot}`} />
+        <span className="text-[11px] uppercase tracking-wider font-semibold text-ink-muted">{label}</span>
+      </div>
+      <span className={`text-lg font-bold tabular ${colors[tone].text}`}>{value}</span>
     </div>
   );
 }
@@ -147,7 +212,7 @@ function QuoteModal({ open, editing, onClose, onSaved }: any) {
 
   return (
     <Modal open={open} title={editing ? 'Editar orçamento' : 'Novo orçamento'} onClose={onClose} size="xl">
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} className="space-y-5">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Cliente</label>
@@ -164,18 +229,18 @@ function QuoteModal({ open, editing, onClose, onSaved }: any) {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-medium text-sm">Itens</h4>
-            <button type="button" className="btn-ghost text-xs"
+            <h4 className="text-[13px] font-semibold text-ink">Itens</h4>
+            <button type="button" className="btn-ghost text-[11px] py-1 px-2"
               onClick={() => setItems([...items, { description: '', quantity: 1, unitPrice: 0, unitCost: 0 }])}>
-              + Adicionar item
+              <Plus size={12} /> Adicionar item
             </button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-app">
             <table className="table w-full">
               <thead>
                 <tr>
                   <th>Descrição</th><th>Qtd</th><th>Vlr unit.</th>
-                  <th>Custo unit.</th><th>Total</th><th />
+                  <th>Custo unit.</th><th className="num">Total</th><th />
                 </tr>
               </thead>
               <tbody>
@@ -189,12 +254,12 @@ function QuoteModal({ open, editing, onClose, onSaved }: any) {
                       value={it.unitPrice} onChange={(e) => update(i, 'unitPrice', e.target.value)} /></td>
                     <td className="w-32"><input className="input" type="number" step="0.01" min="0"
                       value={it.unitCost} onChange={(e) => update(i, 'unitCost', e.target.value)} /></td>
-                    <td className="w-32">{brl(Number(it.quantity || 0) * Number(it.unitPrice || 0))}</td>
+                    <td className="num font-semibold">{brl(Number(it.quantity || 0) * Number(it.unitPrice || 0))}</td>
                     <td>
                       {items.length > 1 && (
-                        <button type="button" className="text-red-600 hover:underline text-xs"
-                          onClick={() => setItems(items.filter((_, idx) => idx !== i))}>
-                          remover
+                        <button type="button" className="btn-icon hover:text-rose-600"
+                          onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Remover">
+                          <Trash2 size={13} />
                         </button>
                       )}
                     </td>
@@ -205,10 +270,20 @@ function QuoteModal({ open, editing, onClose, onSaved }: any) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg">
-          <div><div className="text-xs text-slate-500">Total</div><div className="font-semibold">{brl(totalValue)}</div></div>
-          <div><div className="text-xs text-slate-500">Custo</div><div className="font-semibold">{brl(totalCost)}</div></div>
-          <div><div className="text-xs text-slate-500">Margem</div><div className="font-semibold">{brl(margin)} ({marginPct.toFixed(1)}%)</div></div>
+        <div className="grid grid-cols-3 gap-3 p-4 rounded-xl border border-app bg-app-subtle">
+          <div>
+            <div className="text-[11px] text-ink-subtle uppercase tracking-wider font-semibold">Total</div>
+            <div className="text-lg font-bold text-ink tabular mt-1">{brl(totalValue)}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-ink-subtle uppercase tracking-wider font-semibold">Custo</div>
+            <div className="text-lg font-bold text-ink-muted tabular mt-1">{brl(totalCost)}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-ink-subtle uppercase tracking-wider font-semibold">Margem</div>
+            <div className="text-lg font-bold text-emerald-600 tabular mt-1">{brl(margin)}</div>
+            <MarginBar pct={marginPct} className="mt-1.5" />
+          </div>
         </div>
 
         <div>
@@ -216,7 +291,12 @@ function QuoteModal({ open, editing, onClose, onSaved }: any) {
           <textarea className="input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <div className="flex items-start gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn-primary" type="submit">Salvar</button>

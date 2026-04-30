@@ -30,3 +30,6 @@ Thumbs.db
 # Misc
 coverage/
 .turbo/
+
+# TypeScript incremental
+*.tsbuildinfo

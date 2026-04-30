@@ -3,10 +3,13 @@
 import useSWR from 'swr';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Pencil, Trash2, ClipboardList } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
+import EmptyState from '@/components/ui/EmptyState';
+import MarginBar from '@/components/ui/MarginBar';
 import { OS_STATUS_COLOR, OS_STATUS_LABEL } from '@/lib/labels';
 
 export default function OSListPage() {
@@ -26,7 +29,11 @@ export default function OSListPage() {
 
   return (
     <div>
-      <PageHeader title="Ordens de Serviço" subtitle="Pipeline operacional" />
+      <PageHeader
+        title="Ordens de Serviço"
+        subtitle="Pipeline operacional"
+        icon={ClipboardList}
+      />
 
       <div className="flex gap-2 mb-4 flex-wrap">
         <FilterBtn cur={filter} v="" set={setFilter}>Todas</FilterBtn>
@@ -35,47 +42,67 @@ export default function OSListPage() {
         ))}
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="table w-full">
-          <thead>
-            <tr><th>Nº</th><th>Cliente</th><th>Descrição</th><th>Status</th><th>Total</th><th>Margem</th><th>Criada</th><th /></tr>
-          </thead>
-          <tbody>
-            {(data ?? []).map((o) => (
-              <tr key={o.id} className="hover:bg-slate-50">
-                <td>
-                  <Link href={`/ordens-servico/${o.id}`} className="font-medium text-brand-700 hover:underline">
-                    #{String(o.number).padStart(5, '0')}
-                  </Link>
-                </td>
-                <td>{o.client.name}</td>
-                <td className="max-w-xs truncate">{o.description}</td>
-                <td><span className={`badge ${OS_STATUS_COLOR[o.status]}`}>{OS_STATUS_LABEL[o.status]}</span></td>
-                <td>{brl(o.totalValue)}</td>
-                <td>{brl(o.margin)} ({Number(o.marginPct).toFixed(1)}%)</td>
-                <td>{dt(o.createdAt)}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    {o.status !== 'FINISHED' && o.status !== 'CANCELED' && (
-                      <button className="text-slate-500 hover:text-brand-700" title="Editar"
-                        onClick={() => setEditing(o)}>
-                        <Pencil size={14} />
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="card overflow-hidden"
+      >
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead>
+              <tr><th>Nº</th><th>Cliente</th><th>Descrição</th><th>Status</th><th className="num">Total</th><th>Margem</th><th>Criada</th><th /></tr>
+            </thead>
+            <tbody>
+              {(data ?? []).map((o) => (
+                <tr key={o.id}>
+                  <td>
+                    <Link href={`/ordens-servico/${o.id}`} className="font-semibold text-brand-600 hover:text-brand-700 tabular">
+                      #{String(o.number).padStart(5, '0')}
+                    </Link>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <span className="avatar w-7 h-7">{(o.client.name ?? '?').slice(0, 2).toUpperCase()}</span>
+                      <span className="font-medium text-ink">{o.client.name}</span>
+                    </div>
+                  </td>
+                  <td className="max-w-xs truncate text-ink-muted">{o.description}</td>
+                  <td><span className={OS_STATUS_COLOR[o.status]}>{OS_STATUS_LABEL[o.status]}</span></td>
+                  <td className="num font-semibold">{brl(o.totalValue)}</td>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <MarginBar pct={Number(o.marginPct)} />
+                      <span className="text-[11px] text-ink-subtle tabular whitespace-nowrap">{brl(o.margin)}</span>
+                    </div>
+                  </td>
+                  <td className="text-ink-muted text-[12.5px]">{dt(o.createdAt)}</td>
+                  <td>
+                    <div className="flex items-center gap-1 justify-end">
+                      {o.status !== 'FINISHED' && o.status !== 'CANCELED' && (
+                        <button className="btn-icon hover:text-brand-600" title="Editar"
+                          onClick={() => setEditing(o)}>
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                      <button className="btn-icon hover:text-rose-600" title="Excluir"
+                        onClick={() => deleteOS(o)}>
+                        <Trash2 size={14} />
                       </button>
-                    )}
-                    <button className="text-slate-500 hover:text-red-600" title="Excluir"
-                      onClick={() => deleteOS(o)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {data && data.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-8 text-slate-500">Nenhuma OS</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data && data.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-0">
+                    <EmptyState icon={ClipboardList} title="Nenhuma OS" description="Aprove um orçamento para gerar uma OS." />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
       <EditOSModal
         key={editing?.id}
@@ -92,7 +119,7 @@ function FilterBtn({ cur, v, set, children }: any) {
   return (
     <button
       onClick={() => set(v)}
-      className={`btn ${active ? 'bg-brand-600 text-white' : 'bg-white border border-slate-200 hover:bg-slate-50'}`}
+      className={active ? 'chip-active' : 'chip'}
     >
       {children}
     </button>
@@ -130,7 +157,12 @@ function EditOSModal({ target, onClose, onSaved }: any) {
             <textarea className="input" rows={2} value={notes}
               onChange={(e) => setNotes(e.target.value)} />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <div className="flex items-start gap-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-ghost" onClick={onClose}>Cancelar</button>
             <button className="btn-primary" type="submit">Salvar</button>

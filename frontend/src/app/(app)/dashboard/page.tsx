@@ -1,13 +1,23 @@
 'use client';
 
 import useSWR from 'swr';
+import { motion } from 'framer-motion';
 import { fetcher, brl, dt } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
+import KpiCard from '@/components/ui/KpiCard';
+import ChartCard from '@/components/ui/ChartCard';
+import Skeleton from '@/components/ui/Skeleton';
+import EmptyState from '@/components/ui/EmptyState';
+import MarginBar from '@/components/ui/MarginBar';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
+import {
+  TrendingUp, TrendingDown, Wallet, AlertTriangle,
+  LayoutDashboard, Calendar, AlertCircle, Trophy, Target, Crown,
+} from 'lucide-react';
 
 type Overview = { financeiro: any; operacional: any; comercial: any; estrategico: any };
 
@@ -18,9 +28,9 @@ function isSameDay(a: Date, b: Date) {
 }
 
 export default function DashboardPage() {
-  const { data }          = useSWR<Overview>('/dashboard/overview', fetcher);
-  const { data: top }     = useSWR<any[]>('/dashboard/top-clients', fetcher);
-  const { data: payables } = useSWR<any[]>('/payables', fetcher);
+  const { data }            = useSWR<Overview>('/dashboard/overview', fetcher);
+  const { data: top }       = useSWR<any[]>('/dashboard/top-clients', fetcher);
+  const { data: payables }  = useSWR<any[]>('/payables', fetcher);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -39,214 +49,272 @@ export default function DashboardPage() {
 
   if (!data) return <LoadingState />;
 
+  /* compute delta vs previous period (best effort using fluxoCaixa6Meses) */
+  const flux = data.financeiro.fluxoCaixa6Meses ?? [];
+  const lastNet = flux[flux.length - 1]?.net ?? 0;
+  const prevNet = flux[flux.length - 2]?.net ?? 0;
+  const netDelta = prevNet !== 0 ? ((lastNet - prevNet) / Math.abs(prevNet)) * 100 : 0;
+
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Visão geral integrada do negócio" />
+      <PageHeader
+        title="Dashboard"
+        subtitle="Visão geral integrada do negócio"
+        icon={LayoutDashboard}
+      />
 
       {/* ── KPIs ── */}
       <section className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <KpiCard
+          index={0}
           title="A receber"
           value={brl(data.financeiro.contasReceberPendente)}
-          sub="pendente"
-          color="blue"
+          sub="pendente este mês"
+          tone="brand"
+          icon={TrendingUp}
         />
         <KpiCard
+          index={1}
           title="Em atraso"
           value={brl(data.financeiro.contasReceberAtrasado)}
           sub="receber"
-          color="red"
+          tone="danger"
+          icon={AlertTriangle}
         />
         <KpiCard
+          index={2}
           title="A pagar"
           value={brl(data.financeiro.contasPagarPendente)}
           sub="pendente"
-          color="amber"
+          tone="warning"
+          icon={TrendingDown}
         />
         <KpiCard
+          index={3}
           title="Saldo do mês"
           value={brl(data.financeiro.saldoMes)}
           sub={data.financeiro.saldoMes >= 0 ? 'positivo' : 'negativo'}
-          color={data.financeiro.saldoMes >= 0 ? 'emerald' : 'red'}
+          tone={data.financeiro.saldoMes >= 0 ? 'success' : 'danger'}
+          icon={Wallet}
+          delta={netDelta}
         />
       </section>
 
       {/* ── Gráficos ── */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        {/* Fluxo de caixa — AreaChart */}
-        <div className="card p-5">
-          <div className="mb-4">
-            <div className="section-title">Fluxo de caixa</div>
-            <div className="text-xs text-slate-400 mt-0.5">Últimos 6 meses</div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={data.financeiro.fluxoCaixa6Meses} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+        <ChartCard title="Fluxo de caixa" subtitle="Últimos 6 meses" delay={0.05} height={232}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={flux} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id="gReceived" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.15} />
+                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.32} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gPaid" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.12} />
+                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.24} />
                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gNet" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.28} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} stroke="#F1F5F9" />
+              <CartesianGrid vertical={false} stroke="rgb(var(--border-soft))" strokeDasharray="3 3" />
               <XAxis dataKey="month" tick={CHART_STYLE} axisLine={false} tickLine={false} />
               <YAxis tick={CHART_STYLE} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: 12 }}
-                formatter={(v: any) => [brl(Number(v))]}
-              />
-              <Legend iconType="circle" iconSize={7} />
-              <Area type="monotone" dataKey="received" name="Recebido" stroke="#10b981" strokeWidth={2} fill="url(#gReceived)" dot={false} />
-              <Area type="monotone" dataKey="paid"     name="Pago"     stroke="#ef4444" strokeWidth={2} fill="url(#gPaid)"     dot={false} />
-              <Area type="monotone" dataKey="net"      name="Líquido"  stroke="#3b82f6" strokeWidth={2} fill="url(#gNet)"      dot={false} />
+              <Tooltip formatter={(v: any) => [brl(Number(v))]} cursor={{ stroke: 'rgb(99 102 241 / 0.3)', strokeWidth: 1 }} />
+              <Legend iconType="circle" iconSize={7} wrapperStyle={{ paddingTop: 8 }} />
+              <Area type="monotone" dataKey="received" name="Recebido" stroke="#10b981" strokeWidth={2.2} fill="url(#gReceived)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="paid"     name="Pago"     stroke="#ef4444" strokeWidth={2.2} fill="url(#gPaid)"     dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="net"      name="Líquido"  stroke="#6366f1" strokeWidth={2.4} fill="url(#gNet)"      dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
 
-        {/* Previsão — BarChart */}
-        <div className="card p-5">
-          <div className="mb-4">
-            <div className="section-title">Previsão de caixa</div>
-            <div className="text-xs text-slate-400 mt-0.5">Próximos 6 meses</div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.financeiro.previsao6Meses} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={14} barGap={4}>
-              <CartesianGrid vertical={false} stroke="#F1F5F9" />
+        <ChartCard title="Previsão de caixa" subtitle="Próximos 6 meses" delay={0.1} height={232}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.financeiro.previsao6Meses} margin={{ top: 4, right: 8, left: -16, bottom: 0 }} barSize={14} barGap={4}>
+              <defs>
+                <linearGradient id="gReceiveBar" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.55} />
+                </linearGradient>
+                <linearGradient id="gPayBar" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.85} />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.45} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="rgb(var(--border-soft))" strokeDasharray="3 3" />
               <XAxis dataKey="month" tick={CHART_STYLE} axisLine={false} tickLine={false} />
               <YAxis tick={CHART_STYLE} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: 12 }}
-                formatter={(v: any) => [brl(Number(v))]}
-              />
-              <Legend iconType="circle" iconSize={7} />
-              <Bar dataKey="toReceive" name="A receber" fill="#10b981" radius={[4, 4, 0, 0]} opacity={0.85} />
-              <Bar dataKey="toPay"     name="A pagar"   fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.75} />
+              <Tooltip formatter={(v: any) => [brl(Number(v))]} cursor={{ fill: 'rgb(99 102 241 / 0.06)' }} />
+              <Legend iconType="circle" iconSize={7} wrapperStyle={{ paddingTop: 8 }} />
+              <Bar dataKey="toReceive" name="A receber" fill="url(#gReceiveBar)" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="toPay"     name="A pagar"   fill="url(#gPayBar)"     radius={[5, 5, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
       </section>
 
       {/* ── Métricas ── */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="card p-5">
-          <div className="section-title mb-4">Contas a Pagar</div>
+        {/* Contas a Pagar */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="card p-5 relative overflow-hidden"
+        >
+          <span className="absolute inset-x-0 top-0 h-px hairline-warning opacity-80" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex w-8 h-8 rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 items-center justify-center">
+                <Calendar size={15} strokeWidth={2.25} />
+              </span>
+              <span className="section-title">Contas a Pagar</span>
+            </div>
+          </div>
 
           {/* Hoje */}
-          <div className="mb-4">
+          <div className="mb-4 rounded-xl border border-rose-200/70 bg-rose-50/40 p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-red-500">Hoje</span>
-              <span className="text-xs text-slate-400">{dueToday.length} conta{dueToday.length !== 1 ? 's' : ''}</span>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-rose-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse-glow" />
+                Hoje
+              </span>
+              <span className="text-[11px] text-ink-subtle">{dueToday.length} conta{dueToday.length !== 1 ? 's' : ''}</span>
             </div>
             {dueToday.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Nenhum vencimento hoje</p>
+              <p className="text-xs text-ink-subtle italic">Sem vencimentos hoje 🎉</p>
             ) : (
               <>
                 <div className="space-y-1.5 mb-2">
                   {dueToday.slice(0, 3).map((p) => (
                     <div key={p.id} className="flex justify-between items-center text-xs">
-                      <span className="text-slate-600 truncate max-w-[140px]">{p.description}</span>
-                      <span className="font-semibold text-red-600 tabular ml-2">{brl(p.expectedAmount)}</span>
+                      <span className="text-ink truncate max-w-[140px]">{p.description}</span>
+                      <span className="font-semibold text-rose-600 tabular ml-2">{brl(p.expectedAmount)}</span>
                     </div>
                   ))}
-                  {dueToday.length > 3 && (
-                    <p className="text-xs text-slate-400">+{dueToday.length - 3} mais...</p>
-                  )}
+                  {dueToday.length > 3 && <p className="text-[11px] text-ink-subtle">+{dueToday.length - 3} mais...</p>}
                 </div>
-                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
-                  <span className="text-xs text-slate-400">Total hoje</span>
-                  <span className="text-sm font-bold text-red-600 tabular">{brl(totalToday)}</span>
+                <div className="flex justify-between items-center pt-2 border-t border-rose-200/60">
+                  <span className="text-[11px] text-ink-subtle">Total hoje</span>
+                  <span className="text-sm font-bold text-rose-600 tabular">{brl(totalToday)}</span>
                 </div>
               </>
             )}
           </div>
 
-          <div className="divider my-3" />
-
           {/* Esta semana */}
-          <div>
+          <div className="rounded-xl border border-amber-200/70 bg-amber-50/40 p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-amber-500">Esta semana</span>
-              <span className="text-xs text-slate-400">{dueWeek.length} conta{dueWeek.length !== 1 ? 's' : ''}</span>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Esta semana
+              </span>
+              <span className="text-[11px] text-ink-subtle">{dueWeek.length} conta{dueWeek.length !== 1 ? 's' : ''}</span>
             </div>
             {dueWeek.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Nenhum vencimento esta semana</p>
+              <p className="text-xs text-ink-subtle italic">Nenhum vencimento esta semana</p>
             ) : (
               <>
                 <div className="space-y-1.5 mb-2">
                   {dueWeek.slice(0, 3).map((p) => (
                     <div key={p.id} className="flex justify-between items-center text-xs">
                       <div className="min-w-0">
-                        <div className="text-slate-600 truncate max-w-[130px]">{p.description}</div>
-                        <div className="text-slate-400">{dt(p.dueDate)}</div>
+                        <div className="text-ink truncate max-w-[130px]">{p.description}</div>
+                        <div className="text-ink-subtle">{dt(p.dueDate)}</div>
                       </div>
-                      <span className="font-semibold text-amber-600 tabular ml-2">{brl(p.expectedAmount)}</span>
+                      <span className="font-semibold text-amber-700 tabular ml-2">{brl(p.expectedAmount)}</span>
                     </div>
                   ))}
-                  {dueWeek.length > 3 && (
-                    <p className="text-xs text-slate-400">+{dueWeek.length - 3} mais...</p>
-                  )}
+                  {dueWeek.length > 3 && <p className="text-[11px] text-ink-subtle">+{dueWeek.length - 3} mais...</p>}
                 </div>
-                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
-                  <span className="text-xs text-slate-400">Total semana</span>
-                  <span className="text-sm font-bold text-amber-600 tabular">{brl(totalWeek)}</span>
+                <div className="flex justify-between items-center pt-2 border-t border-amber-200/60">
+                  <span className="text-[11px] text-ink-subtle">Total semana</span>
+                  <span className="text-sm font-bold text-amber-700 tabular">{brl(totalWeek)}</span>
                 </div>
               </>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        <MetricCard title="Comercial">
+        {/* Comercial */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="card p-5 relative overflow-hidden"
+        >
+          <span className="absolute inset-x-0 top-0 h-px hairline-brand opacity-80" />
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex w-8 h-8 rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-500/20 items-center justify-center">
+              <Target size={15} strokeWidth={2.25} />
+            </span>
+            <span className="section-title">Comercial</span>
+          </div>
           <MetricRow label="Total de orçamentos" value={String(data.comercial.totalOrcamentos)} />
-          <MetricRow label="Aprovados"           value={String(data.comercial.orcamentosAprovados)} />
+          <MetricRow label="Aprovados" value={String(data.comercial.orcamentosAprovados)} />
           <div className="divider my-3" />
-          <div className="mt-1">
-            <div className="text-xs text-slate-400 mb-1.5">Taxa de conversão</div>
-            <div className="flex items-end gap-2">
-              <span className="text-2xl font-bold text-slate-900">{data.comercial.taxaConversao}</span>
-              <span className="text-sm text-slate-400 mb-0.5">%</span>
-            </div>
-            <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-500 rounded-full"
-                style={{ width: `${data.comercial.taxaConversao}%`, transition: 'width 0.6s ease' }}
-              />
-            </div>
+          <div className="text-xs text-ink-muted mb-1.5">Taxa de conversão</div>
+          <div className="flex items-end gap-2 mb-2.5">
+            <span className="text-[28px] font-semibold text-ink tracking-tight tabular leading-none">{data.comercial.taxaConversao}</span>
+            <span className="text-sm text-ink-subtle mb-0.5">%</span>
           </div>
-        </MetricCard>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgb(var(--border-soft))' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${data.comercial.taxaConversao}%` }}
+              transition={{ duration: 0.9, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 shadow-[0_0_8px_rgba(99,102,241,0.4)]"
+            />
+          </div>
+        </motion.div>
 
-        <MetricCard title="Estratégico (mês)">
-          <MetricRow label="Receita"      value={brl(data.estrategico.receitaMes)} mono />
-          <MetricRow label="Custo"        value={brl(data.estrategico.custoMes)}   mono />
-          <div className="divider my-3" />
-          <MetricRow label="Margem"       value={brl(data.estrategico.margemMes)}  mono />
-          <div className="mt-3">
-            <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-              <span>Margem média</span>
-              <span className="font-semibold text-emerald-600">{data.estrategico.margemMediaPct}%</span>
-            </div>
-            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full"
-                style={{ width: `${Math.min(data.estrategico.margemMediaPct, 100)}%` }}
-              />
-            </div>
+        {/* Estratégico */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="card p-5 relative overflow-hidden"
+        >
+          <span className="absolute inset-x-0 top-0 h-px hairline-success opacity-80" />
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20 items-center justify-center">
+              <Trophy size={15} strokeWidth={2.25} />
+            </span>
+            <span className="section-title">Estratégico (mês)</span>
           </div>
-        </MetricCard>
+          <MetricRow label="Receita" value={brl(data.estrategico.receitaMes)} mono />
+          <MetricRow label="Custo" value={brl(data.estrategico.custoMes)} mono />
+          <div className="divider my-3" />
+          <MetricRow label="Margem" value={brl(data.estrategico.margemMes)} mono strong />
+          <div className="mt-3">
+            <div className="flex justify-between text-xs mb-2">
+              <span className="text-ink-muted">Margem média</span>
+              <span className="font-semibold text-emerald-600 tabular">{data.estrategico.margemMediaPct}%</span>
+            </div>
+            <MarginBar pct={data.estrategico.margemMediaPct} showLabel={false} />
+          </div>
+        </motion.div>
       </section>
 
       {/* ── Top clientes ── */}
-      <section className="card">
-        <div className="px-5 pt-5 pb-4 border-b border-surface-border flex items-center justify-between">
-          <div>
-            <div className="section-title">Top clientes</div>
-            <div className="text-xs text-slate-400 mt-0.5">Ordenado por receita total</div>
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="card overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-4 border-b border-app flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex w-8 h-8 rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 items-center justify-center">
+              <Crown size={15} strokeWidth={2.25} />
+            </span>
+            <div>
+              <div className="section-title">Top clientes</div>
+              <div className="text-xs text-ink-subtle mt-0.5">Ordenado por receita total</div>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -264,14 +332,22 @@ export default function DashboardPage() {
               {(top ?? []).map((c, i) => (
                 <tr key={c.id}>
                   <td>
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-2xs text-slate-300 tabular w-4 text-right">{i + 1}</span>
-                      <span className="font-medium text-slate-900">{c.name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className={`avatar w-7 h-7 ${i === 0 ? 'ring-1 ring-amber-400/40' : ''}`}>
+                        {(c.name ?? '?').slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-ink truncate flex items-center gap-1.5">
+                          {c.name}
+                          {i === 0 && <Crown size={11} className="text-amber-500" />}
+                        </div>
+                        <div className="text-[11px] text-ink-subtle">#{i + 1}</div>
+                      </div>
                     </div>
                   </td>
-                  <td className="num text-slate-600">{c.orders}</td>
-                  <td className="num">{brl(c.total)}</td>
-                  <td className="num text-slate-600">{brl(c.ticketMedio)}</td>
+                  <td className="num text-ink-muted">{c.orders}</td>
+                  <td className="num font-semibold">{brl(c.total)}</td>
+                  <td className="num text-ink-muted">{brl(c.ticketMedio)}</td>
                   <td className="num">
                     <span className="text-emerald-600 font-semibold">{brl(c.margin)}</span>
                   </td>
@@ -279,15 +355,15 @@ export default function DashboardPage() {
               ))}
               {(!top || top.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="text-center py-10 text-slate-400 text-xs">
-                    Nenhuma OS finalizada ainda
+                  <td colSpan={5} className="p-0">
+                    <EmptyState icon={Crown} title="Sem dados ainda" description="Finalize uma OS para ver o ranking de clientes." />
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }
@@ -296,57 +372,36 @@ export default function DashboardPage() {
 
 function LoadingState() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex flex-col items-center gap-3">
-        <svg className="animate-spin h-6 w-6 text-brand-500" viewBox="0 0 24 24" fill="none">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-        </svg>
-        <span className="text-xs text-slate-400">Carregando dashboard...</span>
+    <div>
+      <div className="mb-7 flex items-center gap-3">
+        <Skeleton width={40} height={40} rounded="xl" />
+        <div className="space-y-1.5">
+          <Skeleton width={160} height={22} />
+          <Skeleton width={220} height={12} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        {[0,1,2,3].map(i => (
+          <div key={i} className="card p-5">
+            <Skeleton width={100} height={12} className="mb-4" />
+            <Skeleton width={120} height={28} className="mb-2" />
+            <Skeleton width={80} height={11} />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="card p-5"><Skeleton height={232} rounded="lg" /></div>
+        <div className="card p-5"><Skeleton height={232} rounded="lg" /></div>
       </div>
     </div>
   );
 }
 
-function KpiCard({ title, value, sub, color }: { title: string; value: string; sub: string; color: string }) {
-  const accent: Record<string, string> = {
-    blue:    'text-blue-600',
-    red:     'text-red-500',
-    amber:   'text-amber-600',
-    emerald: 'text-emerald-600',
-  };
-  const dot: Record<string, string> = {
-    blue:    'bg-blue-500',
-    red:     'bg-red-500',
-    amber:   'bg-amber-500',
-    emerald: 'bg-emerald-500',
-  };
+function MetricRow({ label, value, mono, strong }: { label: string; value: string; mono?: boolean; strong?: boolean }) {
   return (
-    <div className="card p-5 hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`w-1.5 h-1.5 rounded-full ${dot[color]}`} />
-        <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">{title}</span>
-      </div>
-      <div className={`text-2xl font-bold tracking-tight ${accent[color]}`}>{value}</div>
-      <div className="text-xs text-slate-400 mt-1 capitalize">{sub}</div>
-    </div>
-  );
-}
-
-function MetricCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="card p-5">
-      <div className="section-title mb-4">{title}</div>
-      {children}
-    </div>
-  );
-}
-
-function MetricRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between items-center py-1.5 border-b border-surface-border/60 last:border-0">
-      <span className="text-xs text-slate-400">{label}</span>
-      <span className={`text-sm font-semibold text-slate-900 ${mono ? 'tabular' : ''}`}>{value}</span>
+    <div className="flex justify-between items-center py-1.5 border-b border-app-soft last:border-0">
+      <span className="text-xs text-ink-muted">{label}</span>
+      <span className={`text-sm ${strong ? 'font-bold' : 'font-semibold'} text-ink ${mono ? 'tabular' : ''}`}>{value}</span>
     </div>
   );
 }
