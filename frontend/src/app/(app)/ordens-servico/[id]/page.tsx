@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ClipboardList, Play, Check, ArrowRight } from 'lucide-react';
+import { ClipboardList, ArrowRight } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import MarginBar from '@/components/ui/MarginBar';
@@ -143,16 +143,10 @@ export default function OSDetail() {
                 <td>
                   <div className="flex items-center gap-1 justify-end">
                     {s.status !== 'IN_PROGRESS' && s.status !== 'DONE' && (
-                      <button className="btn-icon hover:text-brand-600" title="Iniciar"
-                        onClick={() => changeStage(s.id, 'IN_PROGRESS')}>
-                        <Play size={13} />
-                      </button>
+                      <button className="btn-primary text-[11px] py-1 px-2.5" onClick={() => changeStage(s.id, 'IN_PROGRESS')}>Iniciar</button>
                     )}
                     {s.status !== 'DONE' && (
-                      <button className="btn-icon hover:text-emerald-600" title="Concluir"
-                        onClick={() => changeStage(s.id, 'DONE')}>
-                        <Check size={14} />
-                      </button>
+                      <button className="btn-success text-[11px] py-1 px-2.5" onClick={() => changeStage(s.id, 'DONE')}>Concluir</button>
                     )}
                   </div>
                 </td>

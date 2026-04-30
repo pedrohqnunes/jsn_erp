@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, FileText } from 'lucide-react';
+import { Plus, Trash2, FileText } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -93,15 +93,9 @@ export default function OrcamentosPage() {
                   <td>
                     <div className="flex items-center gap-1 justify-end">
                       {q.status === 'PENDING' && (
-                        <button className="btn-icon hover:text-brand-600" title="Editar"
-                          onClick={() => { setEditing(q); setOpen(true); }}>
-                          <Pencil size={14} />
-                        </button>
+                        <button className="btn-ghost text-[11px] py-1 px-2.5" onClick={() => { setEditing(q); setOpen(true); }}>Editar</button>
                       )}
-                      <button className="btn-icon hover:text-rose-600" title="Excluir"
-                        onClick={() => deleteQuote(q)}>
-                        <Trash2 size={14} />
-                      </button>
+                      <button className="btn-danger text-[11px] py-1 px-2.5" onClick={() => deleteQuote(q)}>Excluir</button>
                     </div>
                   </td>
                 </tr>

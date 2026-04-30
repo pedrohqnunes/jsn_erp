@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, ClipboardList } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -79,15 +79,9 @@ export default function OSListPage() {
                   <td>
                     <div className="flex items-center gap-1 justify-end">
                       {o.status !== 'FINISHED' && o.status !== 'CANCELED' && (
-                        <button className="btn-icon hover:text-brand-600" title="Editar"
-                          onClick={() => setEditing(o)}>
-                          <Pencil size={14} />
-                        </button>
+                        <button className="btn-ghost text-[11px] py-1 px-2.5" onClick={() => setEditing(o)}>Editar</button>
                       )}
-                      <button className="btn-icon hover:text-rose-600" title="Excluir"
-                        onClick={() => deleteOS(o)}>
-                        <Trash2 size={14} />
-                      </button>
+                      <button className="btn-danger text-[11px] py-1 px-2.5" onClick={() => deleteOS(o)}>Excluir</button>
                     </div>
                   </td>
                 </tr>

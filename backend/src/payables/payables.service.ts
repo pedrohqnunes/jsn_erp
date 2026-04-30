@@ -73,6 +73,7 @@ export class PayablesService {
           recurring: true,
           recurringFrequency: p.recurringFrequency,
           notes: p.notes,
+          employeeId: p.employeeId,
         },
       });
     }

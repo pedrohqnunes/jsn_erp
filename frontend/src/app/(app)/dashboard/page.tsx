@@ -168,7 +168,7 @@ export default function DashboardPage() {
           <span className="absolute inset-x-0 top-0 h-px hairline-warning opacity-80" />
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <span className="inline-flex w-8 h-8 rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 items-center justify-center">
+              <span className="inline-flex w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/25 items-center justify-center">
                 <Calendar size={15} strokeWidth={2.25} />
               </span>
               <span className="section-title">Contas a Pagar</span>
@@ -176,9 +176,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Hoje */}
-          <div className="mb-4 rounded-xl border border-rose-200/70 bg-rose-50/40 p-3">
+          <div className="mb-4 rounded-xl border border-rose-500/25 bg-rose-500/10 p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-rose-600">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-rose-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse-glow" />
                 Hoje
               </span>
@@ -192,23 +192,23 @@ export default function DashboardPage() {
                   {dueToday.slice(0, 3).map((p) => (
                     <div key={p.id} className="flex justify-between items-center text-xs">
                       <span className="text-ink truncate max-w-[140px]">{p.description}</span>
-                      <span className="font-semibold text-rose-600 tabular ml-2">{brl(p.expectedAmount)}</span>
+                      <span className="font-semibold text-rose-500 tabular ml-2">{brl(p.expectedAmount)}</span>
                     </div>
                   ))}
                   {dueToday.length > 3 && <p className="text-[11px] text-ink-subtle">+{dueToday.length - 3} mais...</p>}
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-rose-200/60">
+                <div className="flex justify-between items-center pt-2 border-t border-rose-500/20">
                   <span className="text-[11px] text-ink-subtle">Total hoje</span>
-                  <span className="text-sm font-bold text-rose-600 tabular">{brl(totalToday)}</span>
+                  <span className="text-sm font-bold text-rose-500 tabular">{brl(totalToday)}</span>
                 </div>
               </>
             )}
           </div>
 
           {/* Esta semana */}
-          <div className="rounded-xl border border-amber-200/70 bg-amber-50/40 p-3">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-500">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 Esta semana
               </span>
@@ -225,14 +225,14 @@ export default function DashboardPage() {
                         <div className="text-ink truncate max-w-[130px]">{p.description}</div>
                         <div className="text-ink-subtle">{dt(p.dueDate)}</div>
                       </div>
-                      <span className="font-semibold text-amber-700 tabular ml-2">{brl(p.expectedAmount)}</span>
+                      <span className="font-semibold text-amber-500 tabular ml-2">{brl(p.expectedAmount)}</span>
                     </div>
                   ))}
                   {dueWeek.length > 3 && <p className="text-[11px] text-ink-subtle">+{dueWeek.length - 3} mais...</p>}
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-amber-200/60">
+                <div className="flex justify-between items-center pt-2 border-t border-amber-500/25">
                   <span className="text-[11px] text-ink-subtle">Total semana</span>
-                  <span className="text-sm font-bold text-amber-700 tabular">{brl(totalWeek)}</span>
+                  <span className="text-sm font-bold text-amber-500 tabular">{brl(totalWeek)}</span>
                 </div>
               </>
             )}

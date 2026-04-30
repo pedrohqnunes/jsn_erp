@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hammer, Play, Check, Clock, Box } from 'lucide-react';
+import { Hammer, Clock, Box } from 'lucide-react';
 import { api, brl, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -66,15 +66,15 @@ export default function ProducaoPage() {
 
 const TONE = {
   amber: {
-    headerBg:  'bg-amber-50/40 border-amber-200/60',
+    headerBg:  'bg-amber-500/10 border-amber-500/25',
     headerDot: 'bg-amber-500',
-    iconWrap:  'bg-amber-100 text-amber-600 ring-amber-500/20',
+    iconWrap:  'bg-amber-500/15 text-amber-500 ring-amber-500/25',
     accent:    'hairline-warning',
   },
   brand: {
-    headerBg:  'bg-brand-50/40 border-brand-200/60',
+    headerBg:  'bg-brand-500/10 border-brand-500/25',
     headerDot: 'bg-brand-500',
-    iconWrap:  'bg-brand-100 text-brand-600 ring-brand-500/20',
+    iconWrap:  'bg-brand-500/15 text-brand-500 ring-brand-500/25',
     accent:    'hairline-brand',
   },
 };
@@ -158,14 +158,10 @@ function Column({
                     </div>
                     <div className="flex items-center gap-0.5 flex-shrink-0">
                       {s.status !== 'IN_PROGRESS' && s.status !== 'DONE' && (
-                        <button className="btn-icon p-1 hover:text-brand-600" onClick={() => moveStage(s.id, 'IN_PROGRESS')} title="Iniciar">
-                          <Play size={11} />
-                        </button>
+                        <button className="btn-primary text-[11px] py-1 px-2.5" onClick={() => moveStage(s.id, 'IN_PROGRESS')}>Iniciar</button>
                       )}
                       {s.status !== 'DONE' && (
-                        <button className="btn-icon p-1 hover:text-emerald-600" onClick={() => moveStage(s.id, 'DONE')} title="Concluir">
-                          <Check size={12} />
-                        </button>
+                        <button className="btn-success text-[11px] py-1 px-2.5" onClick={() => moveStage(s.id, 'DONE')}>Concluir</button>
                       )}
                     </div>
                   </div>

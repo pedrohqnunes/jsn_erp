@@ -248,7 +248,9 @@ body {
     color: rgb(var(--text));
   }
   .table td.num {
-    @apply text-right font-mono tabular-nums;
+    @apply text-right tabular-nums;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
     color: rgb(var(--text));
   }
 

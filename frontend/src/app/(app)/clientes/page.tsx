@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, Search, Pencil, Trash2, Users, Phone, MapPin } from 'lucide-react';
+import { Plus, Search, Users, Phone, MapPin } from 'lucide-react';
 import { api, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -105,14 +105,8 @@ export default function ClientesPage() {
                   </td>
                   <td>
                     <div className="flex items-center gap-1 justify-end">
-                      <button className="btn-icon hover:text-brand-600" title="Editar"
-                        onClick={() => { setEditing(c); setOpen(true); }}>
-                        <Pencil size={14} />
-                      </button>
-                      <button className="btn-icon hover:text-rose-600" title="Excluir"
-                        onClick={() => deleteClient(c)}>
-                        <Trash2 size={14} />
-                      </button>
+                      <button className="btn-ghost text-[11px] py-1 px-2.5" onClick={() => { setEditing(c); setOpen(true); }}>Editar</button>
+                      <button className="btn-danger text-[11px] py-1 px-2.5" onClick={() => deleteClient(c)}>Excluir</button>
                     </div>
                   </td>
                 </tr>

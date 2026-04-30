@@ -13,6 +13,7 @@ import { ReceivablesModule } from './receivables/receivables.module';
 import { PayablesModule } from './payables/payables.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { UsersModule } from './users/users.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
@@ -29,6 +30,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     PayablesModule,
     EmployeesModule,
     DashboardModule,
+    UsersModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

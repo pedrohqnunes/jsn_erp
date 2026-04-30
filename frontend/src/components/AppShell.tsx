@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, FileText, ClipboardList, Hammer,
   TrendingDown, TrendingUp, UserCog, LogOut,
-  ChevronsLeft, ChevronsRight, Search, Bell, Sparkles,
+  ChevronsLeft, ChevronsRight, Search, Bell, Sparkles, Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,7 +21,8 @@ const NAV = [
   { href: '/producao',       label: 'Produção',           icon: Hammer },
   { href: '/contas-receber', label: 'Contas a Receber',   icon: TrendingUp },
   { href: '/contas-pagar',   label: 'Contas a Pagar',     icon: TrendingDown },
-  { href: '/funcionarios',   label: 'Funcionários',       icon: UserCog },
+  { href: '/funcionarios',              label: 'Funcionários',      icon: UserCog },
+  { href: '/configuracoes/usuarios',   label: 'Usuários',          icon: Settings },
 ];
 
 const GROUPS = [
@@ -29,7 +30,8 @@ const GROUPS = [
   { title: 'Comercial',   items: NAV.slice(1, 4) },
   { title: 'Operacional', items: NAV.slice(4, 5) },
   { title: 'Financeiro',  items: NAV.slice(5, 7) },
-  { title: 'Equipe',      items: NAV.slice(7) },
+  { title: 'Equipe',          items: NAV.slice(7, 8) },
+  { title: 'Configurações',  items: NAV.slice(8) },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -83,11 +85,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Logo */}
         <div className="relative px-3.5 pt-5 pb-4 border-b border-white/[0.05]">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3.5">
             <div className="relative flex-shrink-0">
-              <Image src="/logo-36.png" alt="JSN" width={32} height={32}
-                className="rounded-lg ring-1 ring-white/10" priority />
-              <span className="absolute -inset-1 rounded-xl bg-brand-500/20 blur-md -z-10" />
+              <Image src="/logo-36.png" alt="JSN" width={42} height={42}
+                className="rounded-xl ring-1 ring-white/10" priority />
+              <span className="absolute -inset-1 rounded-2xl bg-brand-500/20 blur-md -z-10" />
             </div>
             <AnimatePresence initial={false}>
               {!collapsed && (
@@ -96,9 +98,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -6 }}
                   transition={{ duration: 0.2 }}
-                  className="min-w-0"
+                  className="min-w-0 pl-1"
                 >
-                  <div className="text-[13px] font-semibold text-white leading-none mb-1 tracking-tight">JSN Pinturas</div>
+                  <div className="text-[13.5px] font-semibold text-white leading-none mb-1.5 tracking-tight">JSN Pinturas</div>
                   <div className="text-[10px] text-white/35 leading-none">Sistema de Gestão</div>
                 </motion.div>
               )}

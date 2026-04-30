@@ -228,11 +228,14 @@ model Payable {
   recurring          Boolean             @default(false)
   recurringFrequency RecurringFrequency?
   notes              String?
+  employeeId         String?
+  employee           Employee?           @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
   @@index([status, dueDate])
   @@index([category])
+  @@index([employeeId])
 }
 
 enum RecurringFrequency {
@@ -245,17 +248,20 @@ enum RecurringFrequency {
 // ===================== FUNCIONÁRIOS =====================
 
 model Employee {
-  id        String         @id @default(uuid())
-  name      String
-  role      String
-  phone     String?
-  email     String?
-  status    EmployeeStatus @default(ACTIVE)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id           String         @id @default(uuid())
+  name         String
+  role         String
+  phone        String?
+  email        String?
+  status       EmployeeStatus @default(ACTIVE)
+  salary       Decimal?       @db.Decimal(14, 2)
+  salaryPayDay Int?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   serviceOrders    ServiceOrder[]
   productionStages ProductionStage[]
+  payables         Payable[]
 }
 
 enum EmployeeStatus {

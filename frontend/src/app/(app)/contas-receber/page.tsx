@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, XCircle, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -67,7 +67,7 @@ export default function ReceberPage() {
                   <td className="text-ink-muted text-[12.5px]">{r.installment}/{r.totalInstallments}</td>
                   <td className="text-ink-muted text-[12.5px]">{dt(r.dueDate)}</td>
                   <td className="num font-semibold">{brl(r.expectedAmount)}</td>
-                  <td className="num text-ink-muted">{brl(r.paidAmount)}</td>
+                  <td className="num font-semibold text-ink-muted">{brl(r.paidAmount)}</td>
                   <td><span className={PAY_STATUS_COLOR[r.status]}>{PAY_STATUS_LABEL[r.status]}</span></td>
                   <td className="text-ink-muted text-[12.5px]">{r.paidAt ? PAYMENT_METHOD_LABEL[r.paymentMethod] : '—'}</td>
                   <td>
@@ -75,14 +75,8 @@ export default function ReceberPage() {
                       {(r.status === 'PENDING' || r.status === 'OVERDUE') && (
                         <>
                           <button className="btn-primary text-[11px] py-1 px-2.5" onClick={() => setPaying(r)}>Receber</button>
-                          <button className="btn-icon hover:text-brand-600" title="Editar"
-                            onClick={() => setEditing(r)}>
-                            <Pencil size={14} />
-                          </button>
-                          <button className="btn-icon hover:text-rose-600" title="Cancelar"
-                            onClick={() => cancel(r)}>
-                            <XCircle size={14} />
-                          </button>
+                          <button className="btn-ghost text-[11px] py-1 px-2.5" onClick={() => setEditing(r)}>Editar</button>
+                          <button className="btn-danger text-[11px] py-1 px-2.5" onClick={() => cancel(r)}>Cancelar</button>
                         </>
                       )}
                     </div>

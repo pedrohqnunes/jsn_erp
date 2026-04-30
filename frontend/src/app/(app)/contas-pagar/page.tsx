@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, AlertCircle, Clock, TrendingDown, Repeat } from 'lucide-react';
+import { Plus, AlertCircle, Clock, TrendingDown, Repeat } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -63,24 +63,29 @@ export default function PagarPage() {
         {dueToday.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="mb-4 p-4 rounded-2xl border border-rose-200 relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgb(254 242 242) 0%, rgb(255 255 255) 80%)' }}
+            className="mb-4 rounded-2xl border border-rose-500/25 bg-rose-500/5 relative overflow-hidden"
           >
             <span className="absolute inset-x-0 top-0 h-px hairline-danger" />
-            <div className="flex items-center gap-2 mb-3 text-rose-700 font-semibold">
-              <AlertCircle size={15} className="animate-pulse-glow" />
-              <span>Vencendo hoje ({dueToday.length})</span>
-              <span className="ml-auto text-sm font-bold tabular">{brl(totalToday)}</span>
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-rose-500/15">
+              <span className="inline-flex w-7 h-7 rounded-lg bg-rose-500/15 text-rose-500 items-center justify-center shrink-0">
+                <AlertCircle size={14} className="animate-pulse-glow" />
+              </span>
+              <span className="font-semibold text-ink text-[13px]">Vencendo hoje</span>
+              <span className="text-[11px] text-ink-subtle">{dueToday.length} conta{dueToday.length !== 1 ? 's' : ''}</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <span className="text-[11px] text-ink-subtle">Total</span>
+                <span className="text-sm font-bold tabular text-rose-500">{brl(totalToday)}</span>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-3">
               {dueToday.map((p) => (
-                <div key={p.id} className="bg-surface-card border border-rose-200/70 rounded-xl px-3 py-2.5 text-sm
-                                          hover:shadow-sm hover:border-rose-300 transition-all">
-                  <div className="font-medium text-ink truncate">{p.description}</div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-rose-600 font-semibold tabular">{brl(p.expectedAmount)}</span>
+                <div key={p.id} className="group bg-surface-card border border-rose-500/20 rounded-xl p-3
+                                          hover:border-rose-500/40 hover:shadow-sm transition-all">
+                  <div className="font-medium text-ink text-sm truncate mb-1">{p.description}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold tabular text-rose-500">{brl(p.expectedAmount)}</span>
                     {(p.status === 'PENDING' || p.status === 'OVERDUE') && (
-                      <button className="text-[11px] font-semibold text-brand-600 hover:text-brand-700"
+                      <button className="text-[11px] font-semibold text-brand-500 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => setPaying(p)}>
                         Pagar →
                       </button>
@@ -95,22 +100,44 @@ export default function PagarPage() {
         {dueWeek.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="mb-4 p-4 rounded-2xl border border-amber-200 relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgb(255 251 235) 0%, rgb(255 255 255) 80%)' }}
+            className="mb-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 relative overflow-hidden"
           >
             <span className="absolute inset-x-0 top-0 h-px hairline-warning" />
-            <div className="flex items-center gap-2 mb-3 text-amber-700 font-semibold">
-              <Clock size={15} />
-              <span>Vencendo esta semana ({dueWeek.length})</span>
-              <span className="ml-auto text-sm font-bold tabular">{brl(totalWeek)}</span>
+            {/* Header */}
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-amber-500/15">
+              <span className="inline-flex w-7 h-7 rounded-lg bg-amber-500/15 text-amber-500 items-center justify-center shrink-0">
+                <Clock size={14} />
+              </span>
+              <span className="font-semibold text-ink text-[13px]">Vencendo esta semana</span>
+              <span className="text-[11px] text-ink-subtle">{dueWeek.length} conta{dueWeek.length !== 1 ? 's' : ''}</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <span className="text-[11px] text-ink-subtle">Total</span>
+                <span className="text-sm font-bold tabular text-amber-500">{brl(totalWeek)}</span>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {/* Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-3">
               {dueWeek.map((p) => (
-                <div key={p.id} className="bg-surface-card border border-amber-200/70 rounded-xl px-3 py-2.5 text-sm
-                                          hover:shadow-sm hover:border-amber-300 transition-all">
-                  <div className="font-medium text-ink truncate">{p.description}</div>
-                  <div className="text-[11px] text-ink-subtle mt-0.5">{dt(p.dueDate)}</div>
-                  <div className="text-amber-700 font-semibold tabular mt-1">{brl(p.expectedAmount)}</div>
+                <div key={p.id} className="group bg-surface-card border border-amber-500/20 rounded-xl p-3
+                                          hover:border-amber-500/40 hover:shadow-sm transition-all">
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div className="min-w-0">
+                      <div className="font-medium text-ink text-sm truncate">{p.description}</div>
+                      {p.category && (
+                        <div className="text-[11px] text-ink-subtle mt-0.5">{p.category}</div>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-500 whitespace-nowrap shrink-0">
+                      {dt(p.dueDate)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-amber-500/10">
+                    <span className="font-semibold tabular text-amber-500">{brl(p.expectedAmount)}</span>
+                    <button className="text-[11px] font-semibold text-brand-500 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setPaying(p)}>
+                      Pagar →
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -153,7 +180,7 @@ export default function PagarPage() {
                     <td className="text-ink-muted text-[12.5px]">{p.category}</td>
                     <td className="text-ink-muted text-[12.5px]">{dt(p.dueDate)}</td>
                     <td className="num font-semibold">{brl(p.expectedAmount)}</td>
-                    <td className="num text-ink-muted">{brl(p.paidAmount)}</td>
+                    <td className="num font-semibold text-ink-muted">{brl(p.paidAmount)}</td>
                     <td><span className={PAY_STATUS_COLOR[p.status]}>{PAY_STATUS_LABEL[p.status]}</span></td>
                     <td>
                       {p.recurring ? (
@@ -168,15 +195,9 @@ export default function PagarPage() {
                           <button className="btn-primary text-[11px] py-1 px-2.5" onClick={() => setPaying(p)}>Pagar</button>
                         )}
                         {p.status !== 'PAID' && (
-                          <button className="btn-icon hover:text-brand-600" title="Editar"
-                            onClick={() => setEditing(p)}>
-                            <Pencil size={14} />
-                          </button>
+                          <button className="btn-ghost text-[11px] py-1 px-2.5" onClick={() => setEditing(p)}>Editar</button>
                         )}
-                        <button className="btn-icon hover:text-rose-600" title="Excluir"
-                          onClick={() => deletePayable(p)}>
-                          <Trash2 size={14} />
-                        </button>
+                        <button className="btn-danger text-[11px] py-1 px-2.5" onClick={() => deletePayable(p)}>Excluir</button>
                       </div>
                     </td>
                   </tr>
