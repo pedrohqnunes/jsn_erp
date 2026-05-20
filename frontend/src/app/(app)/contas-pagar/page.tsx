@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, AlertCircle, Clock, TrendingDown, Repeat } from 'lucide-react';
+import { Plus, AlertCircle, Clock, TrendingDown, Repeat, Search, X } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -23,6 +23,7 @@ function isThisWeek(date: Date, today: Date) {
 
 export default function PagarPage() {
   const [filter, setFilter] = useState('');
+  const [search, setSearch] = useState('');
   const { data, mutate } = useSWR<any[]>(`/payables${filter ? `?status=${filter}` : ''}`, fetcher);
   const { data: allData } = useSWR<any[]>('/payables', fetcher);
   const [createOpen, setCreateOpen] = useState(false);
@@ -145,13 +146,27 @@ export default function PagarPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         {['', 'PENDING', 'OVERDUE', 'PAID', 'CANCELED'].map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={filter === s ? 'chip-active' : 'chip'}>
             {s ? PAY_STATUS_LABEL[s] : 'Todos'}
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg border border-app bg-surface-card text-[12.5px] text-ink-subtle w-[230px] focus-within:border-brand-500/40 transition-colors">
+          <Search size={13} className="flex-shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar descrição ou categoria..."
+            className="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-subtle text-[12.5px]"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="flex-shrink-0 text-ink-subtle hover:text-ink transition-colors">
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       <motion.div
@@ -168,7 +183,13 @@ export default function PagarPage() {
               </tr>
             </thead>
             <tbody>
-              {(data ?? []).map((p) => {
+              {(search.trim()
+                ? (data ?? []).filter((p) => {
+                    const t = search.toLowerCase();
+                    return p.description?.toLowerCase().includes(t) || p.category?.toLowerCase().includes(t);
+                  })
+                : (data ?? [])
+              ).map((p) => {
                 const due = new Date(p.dueDate);
                 const isUrgent = (p.status === 'PENDING' || p.status === 'OVERDUE') && due <= new Date(today.getTime() + 86400000 * 2);
                 return (
@@ -203,9 +224,12 @@ export default function PagarPage() {
                   </tr>
                 );
               })}
-              {data && data.length === 0 && (
+              {data && (search.trim()
+                ? (data ?? []).filter((p) => { const t = search.toLowerCase(); return p.description?.toLowerCase().includes(t) || p.category?.toLowerCase().includes(t); }).length === 0
+                : data.length === 0
+              ) && (
                 <tr><td colSpan={8} className="p-0">
-                  <EmptyState icon={TrendingDown} title="Nenhuma despesa" description="Adicione despesas para começar." />
+                  <EmptyState icon={TrendingDown} title={search ? 'Nenhum resultado' : 'Nenhuma despesa'} description={search ? `Nada encontrado para "${search}".` : 'Adicione despesas para começar.'} />
                 </td></tr>
               )}
             </tbody>

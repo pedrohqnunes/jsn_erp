@@ -7,11 +7,12 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, FileText, ClipboardList, Hammer,
   TrendingDown, TrendingUp, UserCog, LogOut,
-  ChevronsLeft, ChevronsRight, Search, Bell, Sparkles, Settings,
+  ChevronsLeft, ChevronsRight, Bell, Sparkles, Settings,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggle from './ui/ThemeToggle';
+import GlobalSearch from './GlobalSearch';
 
 const NAV = [
   { href: '/dashboard',      label: 'Dashboard',         icon: LayoutDashboard },
@@ -257,14 +258,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <span className="font-semibold text-ink truncate">{activePage?.label ?? 'Dashboard'}</span>
             </div>
 
-            {/* Search (decorative — wires to nothing yet) */}
-            <div className="ml-auto hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg
-                            border border-app bg-surface-card text-[12.5px] text-ink-subtle
-                            hover:border-brand-500/40 transition-colors w-[280px] cursor-pointer">
-              <Search size={13} />
-              <span>Buscar...</span>
-              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-app-subtle border border-app text-ink-subtle">⌘K</span>
-            </div>
+            <GlobalSearch />
 
             <button className="btn-icon" title="Notificações">
               <Bell size={15} />

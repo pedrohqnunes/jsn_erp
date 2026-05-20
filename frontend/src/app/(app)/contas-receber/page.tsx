@@ -3,7 +3,7 @@
 import useSWR from 'swr';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Search, X } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -12,6 +12,7 @@ import { PAY_STATUS_COLOR, PAY_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/lib/
 
 export default function ReceberPage() {
   const [filter, setFilter] = useState('');
+  const [search, setSearch] = useState('');
   const { data, mutate } = useSWR<any[]>(`/receivables${filter ? `?status=${filter}` : ''}`, fetcher);
   const [paying, setPaying] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
@@ -32,13 +33,27 @@ export default function ReceberPage() {
         icon={TrendingUp}
       />
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         {['', 'PENDING', 'OVERDUE', 'PAID', 'CANCELED'].map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={filter === s ? 'chip-active' : 'chip'}>
             {s ? PAY_STATUS_LABEL[s] : 'Todos'}
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg border border-app bg-surface-card text-[12.5px] text-ink-subtle w-[230px] focus-within:border-brand-500/40 transition-colors">
+          <Search size={13} className="flex-shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar cliente ou nº OS..."
+            className="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-subtle text-[12.5px]"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="flex-shrink-0 text-ink-subtle hover:text-ink transition-colors">
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       <motion.div
@@ -55,7 +70,16 @@ export default function ReceberPage() {
               </tr>
             </thead>
             <tbody>
-              {(data ?? []).map((r) => (
+              {(search.trim()
+                ? (data ?? []).filter((r) => {
+                    const t = search.toLowerCase();
+                    return (
+                      r.serviceOrder?.client?.name?.toLowerCase().includes(t) ||
+                      String(r.serviceOrder?.number).includes(t)
+                    );
+                  })
+                : (data ?? [])
+              ).map((r) => (
                 <tr key={r.id}>
                   <td>
                     <div className="flex items-center gap-2.5">
@@ -83,9 +107,12 @@ export default function ReceberPage() {
                   </td>
                 </tr>
               ))}
-              {data && data.length === 0 && (
+              {data && (search.trim()
+                ? (data ?? []).filter((r) => { const t = search.toLowerCase(); return r.serviceOrder?.client?.name?.toLowerCase().includes(t) || String(r.serviceOrder?.number).includes(t); }).length === 0
+                : data.length === 0
+              ) && (
                 <tr><td colSpan={9} className="p-0">
-                  <EmptyState icon={TrendingUp} title="Nada por aqui" description="Parcelas são criadas automaticamente quando uma OS é gerada." />
+                  <EmptyState icon={TrendingUp} title={search ? 'Nenhum resultado' : 'Nada por aqui'} description={search ? `Nada encontrado para "${search}".` : 'Parcelas são criadas automaticamente quando uma OS é gerada.'} />
                 </td></tr>
               )}
             </tbody>

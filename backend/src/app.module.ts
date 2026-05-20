@@ -14,6 +14,7 @@ import { PayablesModule } from './payables/payables.module';
 import { EmployeesModule } from './employees/employees.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
+import { SearchModule } from './search/search.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
@@ -31,6 +32,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     EmployeesModule,
     DashboardModule,
     UsersModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

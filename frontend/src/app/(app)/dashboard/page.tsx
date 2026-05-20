@@ -147,7 +147,7 @@ export default function DashboardPage() {
               <CartesianGrid vertical={false} stroke="rgb(var(--border-soft))" strokeDasharray="3 3" />
               <XAxis dataKey="month" tick={CHART_STYLE} axisLine={false} tickLine={false} />
               <YAxis tick={CHART_STYLE} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: any) => [brl(Number(v))]} cursor={{ fill: 'rgb(99 102 241 / 0.06)' }} />
+              <Tooltip content={CashForecastTooltip} cursor={{ fill: 'rgb(99 102 241 / 0.06)' }} />
               <Legend iconType="circle" iconSize={7} wrapperStyle={{ paddingTop: 8 }} />
               <Bar dataKey="toReceive" name="A receber" fill="url(#gReceiveBar)" radius={[5, 5, 0, 0]} />
               <Bar dataKey="toPay"     name="A pagar"   fill="url(#gPayBar)"     radius={[5, 5, 0, 0]} />
@@ -369,6 +369,44 @@ export default function DashboardPage() {
 }
 
 /* ── Sub-components ── */
+
+function CashForecastTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const toReceive = payload.find((p: any) => p.dataKey === 'toReceive');
+  const toPay     = payload.find((p: any) => p.dataKey === 'toPay');
+  const net       = (Number(toReceive?.value ?? 0) - Number(toPay?.value ?? 0));
+  return (
+    <div className="rounded-xl border border-app bg-surface-card shadow-modal px-3.5 py-3 min-w-[180px]"
+         style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle mb-2.5">{label}</p>
+      {toReceive && (
+        <div className="flex items-center justify-between gap-4 mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+            <span className="text-[12px] text-ink-muted">A receber</span>
+          </div>
+          <span className="text-[12.5px] font-semibold text-emerald-500 tabular">{brl(Number(toReceive.value))}</span>
+        </div>
+      )}
+      {toPay && (
+        <div className="flex items-center justify-between gap-4 mb-2.5">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
+            <span className="text-[12px] text-ink-muted">A pagar</span>
+          </div>
+          <span className="text-[12.5px] font-semibold text-rose-500 tabular">{brl(Number(toPay.value))}</span>
+        </div>
+      )}
+      <div className="border-t border-app pt-2 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${net >= 0 ? 'bg-brand-500' : 'bg-rose-400'}`} />
+          <span className="text-[12px] text-ink-muted">Líquido</span>
+        </div>
+        <span className={`text-[12.5px] font-bold tabular ${net >= 0 ? 'text-brand-500' : 'text-rose-400'}`}>{brl(net)}</span>
+      </div>
+    </div>
+  );
+}
 
 function LoadingState() {
   return (

@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Search, X } from 'lucide-react';
 import { api, brl, dt, fetcher } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
@@ -14,6 +14,7 @@ import { OS_STATUS_COLOR, OS_STATUS_LABEL } from '@/lib/labels';
 
 export default function OSListPage() {
   const [filter, setFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
   const { data, mutate } = useSWR<any[]>(`/service-orders${filter ? `?status=${filter}` : ''}`, fetcher);
   const [editing, setEditing] = useState<any>(null);
 
@@ -35,11 +36,25 @@ export default function OSListPage() {
         icon={ClipboardList}
       />
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <FilterBtn cur={filter} v="" set={setFilter}>Todas</FilterBtn>
         {Object.entries(OS_STATUS_LABEL).map(([k, v]) => (
           <FilterBtn key={k} cur={filter} v={k} set={setFilter}>{v}</FilterBtn>
         ))}
+        <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg border border-app bg-surface-card text-[12.5px] text-ink-subtle w-[230px] focus-within:border-brand-500/40 transition-colors">
+          <Search size={13} className="flex-shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar cliente, descrição ou nº..."
+            className="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-subtle text-[12.5px]"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="flex-shrink-0 text-ink-subtle hover:text-ink transition-colors">
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       <motion.div
@@ -53,7 +68,17 @@ export default function OSListPage() {
               <tr><th>Nº</th><th>Cliente</th><th>Descrição</th><th>Status</th><th className="num">Total</th><th>Margem</th><th>Criada</th><th /></tr>
             </thead>
             <tbody>
-              {(data ?? []).map((o) => (
+              {(search.trim()
+                ? (data ?? []).filter((o) => {
+                    const t = search.toLowerCase();
+                    return (
+                      o.client?.name?.toLowerCase().includes(t) ||
+                      o.description?.toLowerCase().includes(t) ||
+                      String(o.number).includes(t)
+                    );
+                  })
+                : (data ?? [])
+              ).map((o) => (
                 <tr key={o.id}>
                   <td>
                     <Link href={`/ordens-servico/${o.id}`} className="font-semibold text-brand-600 hover:text-brand-700 tabular">
@@ -86,10 +111,13 @@ export default function OSListPage() {
                   </td>
                 </tr>
               ))}
-              {data && data.length === 0 && (
+              {data && (search.trim()
+                ? (data ?? []).filter((o) => { const t = search.toLowerCase(); return o.client?.name?.toLowerCase().includes(t) || o.description?.toLowerCase().includes(t) || String(o.number).includes(t); }).length === 0
+                : data.length === 0
+              ) && (
                 <tr>
                   <td colSpan={8} className="p-0">
-                    <EmptyState icon={ClipboardList} title="Nenhuma OS" description="Aprove um orçamento para gerar uma OS." />
+                    <EmptyState icon={ClipboardList} title={search ? 'Nenhum resultado' : 'Nenhuma OS'} description={search ? `Nada encontrado para "${search}".` : 'Aprove um orçamento para gerar uma OS.'} />
                   </td>
                 </tr>
               )}
